@@ -179,7 +179,7 @@ func commands_list() -> void:
 	cmds.sort()
 
 	for command in cmds:
-		var command_display := command.replace("_", " ")
+		var command_display: String = command.replace("_", " ")
 		var arguments_string := ""
 		var description : String = console.console_commands[command].description
 		for i in range(console.console_commands[command].arguments.size()):
