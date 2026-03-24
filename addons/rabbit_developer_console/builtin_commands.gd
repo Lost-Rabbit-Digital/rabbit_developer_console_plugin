@@ -15,7 +15,7 @@ func register_all() -> void:
 	console.add_command("exit", quit, 0, 0, "Quits the game.")
 	console.add_command("clear", clear, 0, 0, "Clears the text on the console.")
 	console.add_command("delete_history", delete_history, 0, 0, "Deletes the history of previously entered commands.")
-	console.add_command("help", help, 0, 0, "Displays instructions on how to use the console.")
+	console.add_command("help", help, ["command"], 0, "Displays instructions on how to use the console. Pass a command name for detailed help.")
 	console.add_command("commands_list", commands_list, 0, 0, "Lists all commands and their descriptions.")
 	console.add_command("commands", commands, 0, 0, "Lists commands with no descriptions.")
 	console.add_command("discord", discord, 0, 0, "Prints the link to the Rabbit Developer Console Discord server.")
@@ -94,9 +94,11 @@ func delete_history() -> void:
 func discord() -> void:
 	console.print_line("Join the Rabbit Developer Console Discord: [url=https://discord.gg/Y7caBf7gBj]https://discord.gg/Y7caBf7gBj[/url]")
 
-
-func help() -> void:
-	console.rich_label.append_text("[color=#ffff55]BUILT-IN COMMANDS[/color]
+func help(command_name: String = "") -> void:
+	if not command_name.is_empty():
+		_show_command_help(command_name.to_lower().strip_edges().replace(" ", "_"))
+		return
+	console.rich_label.append_text("[color=#ffff55]BUILT-IN COMMANDS[/color]\n[color=#888888]  Use [/color][color=#00ff00]help <command>[/color][color=#888888] for detailed help on any command.[/color]
 
 [color=#888888]  General[/color]
   [color=#00ff00]clear[/color]            Clear the terminal screen
@@ -530,6 +532,674 @@ func _count_nodes(node : Node) -> int:
 	for child in node.get_children():
 		count += _count_nodes(child)
 	return count
+
+
+# ---- Command help pages ----
+
+func _show_command_help(command_name: String) -> void:
+	var pages := _build_help_pages()
+	# Resolve aliases to their canonical entry
+	var aliases := {"exit": "quit", "reload": "restart", "unmute": "mute",
+		"volume_up": "volume", "volume_down": "volume",
+		"echo_warning": "echo", "echo_info": "echo", "echo_error": "echo",
+		"console_bottom": "console_full", "console_top": "console_full",
+		"console_left": "console_full", "console_right": "console_full"}
+	var key := aliases.get(command_name, command_name)
+	if pages.has(key):
+		console.rich_label.append_text(pages[key])
+	elif console.console_commands.has(command_name):
+		var cmd = console.console_commands[command_name]
+		var display := command_name.replace("_", " ")
+		var args_str := ""
+		for i in range(cmd.arguments.size()):
+			if i < cmd.required:
+				args_str += " [color=#5555ff]<%s>[/color]" % cmd.arguments[i]
+			else:
+				args_str += " [color=#666666][%s][/color]" % cmd.arguments[i]
+		console.rich_label.append_text("[color=#ffff55]HELP: %s[/color]\n\n  [color=#00ff00]%s[/color]%s\n\n  %s\n\n" % [display, display, args_str, cmd.description])
+	else:
+		console.print_error("help: no entry for '%s'. Try [color=#00ff00]commands[/color] to list all commands." % command_name.replace("_", " "))
+
+
+func _build_help_pages() -> Dictionary:
+	return {
+# ---- General ----
+"quit": """[color=#ffff55]QUIT[/color]                                          [color=#888888]general[/color]
+
+  [color=#00ff00]quit[/color]  [color=#888888]alias:[/color] [color=#00ff00]exit[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Immediately terminates the application. Equivalent to calling
+  [color=#888888]get_tree().quit()[/color] in GDScript.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]quit[/color]
+  [color=#00ff00]exit[/color]
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]quit[/color]
+  [color=#00ff00]exit[/color]
+
+""",
+# -------
+"clear": """[color=#ffff55]CLEAR[/color]                                         [color=#888888]general[/color]
+
+  [color=#00ff00]clear[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Clears all text currently displayed in the console output buffer.
+  Does not affect command history or any game state.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]clear[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]delete history[/color]
+
+""",
+# -------
+"delete_history": """[color=#ffff55]DELETE HISTORY[/color]                               [color=#888888]general[/color]
+
+  [color=#00ff00]delete history[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Clears the persistent command history. The history file stored at
+  [color=#888888]user://console_history.txt[/color] is deleted and the in-memory history
+  list is reset. Up/Down navigation will be empty after this command.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]delete history[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]clear[/color]
+
+""",
+# -------
+"help": """[color=#ffff55]HELP[/color]                                          [color=#888888]general[/color]
+
+  [color=#00ff00]help[/color] [color=#666666][command][/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  With no arguments, displays a summary of all built-in commands and
+  key bindings. When a command name is given, displays a detailed
+  reference page for that specific command.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]help[/color]
+  [color=#00ff00]help[/color] [color=#666666][command][/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#666666][command][/color]   Name of any registered command (optional).
+             Spaces and underscores are both accepted.
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]help[/color]
+  [color=#00ff00]help[/color] calc
+  [color=#00ff00]help[/color] load scene
+  [color=#00ff00]help[/color] vsync
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]commands[/color]  [color=#00ff00]commands list[/color]
+
+""",
+# -------
+"commands": """[color=#ffff55]COMMANDS[/color]                                      [color=#888888]general[/color]
+
+  [color=#00ff00]commands[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Prints a compact list of every visible command name. Hidden commands
+  (registered with [color=#888888]add_hidden_command[/color]) are excluded. Use
+  [color=#00ff00]commands list[/color] to also see argument signatures and descriptions.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]commands[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]commands list[/color]  [color=#00ff00]help[/color]
+
+""",
+# -------
+"commands_list": """[color=#ffff55]COMMANDS LIST[/color]                                [color=#888888]general[/color]
+
+  [color=#00ff00]commands list[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Prints all visible commands with their full argument signatures and
+  one-line descriptions. Required arguments are shown in
+  [color=#5555ff]<angle brackets>[/color] and optional ones in [color=#666666][square brackets][/color].
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]commands list[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]commands[/color]  [color=#00ff00]help[/color]
+
+""",
+# ---- Output ----
+"echo": """[color=#ffff55]ECHO[/color]                                          [color=#888888]output[/color]
+
+  [color=#00ff00]echo[/color] [color=#5555ff]<string>[/color]
+  [color=#00ff00]echo warning[/color] [color=#5555ff]<string>[/color]
+  [color=#00ff00]echo info[/color] [color=#5555ff]<string>[/color]
+  [color=#00ff00]echo error[/color] [color=#5555ff]<string>[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Prints a message to the console output. The four variants apply
+  different color styling:
+    [color=#00ff00]echo[/color]          — plain white text
+    [color=#ffff55]echo warning[/color]  — yellow warning text
+    [color=#5555ff]echo info[/color]     — blue info text
+    [color=#ff4444]echo error[/color]    — red error text
+
+  The entire remainder of the line (including spaces) is treated as
+  the string argument, so quotes are not required.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]echo[/color] [color=#5555ff]<string>[/color]
+  [color=#00ff00]echo warning[/color] [color=#5555ff]<string>[/color]
+  [color=#00ff00]echo info[/color] [color=#5555ff]<string>[/color]
+  [color=#00ff00]echo error[/color] [color=#5555ff]<string>[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<string>[/color]   Any text to display. Spaces are preserved.
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]echo[/color] Hello, world!
+  [color=#00ff00]echo warning[/color] Low memory detected
+  [color=#00ff00]echo error[/color] Failed to load asset
+
+""",
+# ---- Utility ----
+"calc": """[color=#ffff55]CALC[/color]                                          [color=#888888]utility[/color]
+
+  [color=#00ff00]calc[/color] [color=#5555ff]<expression>[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Evaluates a mathematical expression using Godot's built-in
+  [color=#888888]Expression[/color] class and prints the result. Supports standard
+  arithmetic operators, parentheses, and most GDScript math functions
+  (sin, cos, sqrt, pow, abs, floor, ceil, round, etc.).
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]calc[/color] [color=#5555ff]<expression>[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<expression>[/color]   A mathematical expression. The entire remainder of the
+               line is treated as one expression — no quotes needed.
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]calc[/color] 2 + 2
+  [color=#00ff00]calc[/color] sqrt(144)
+  [color=#00ff00]calc[/color] sin(PI / 6)
+  [color=#00ff00]calc[/color] (1920 * 1080) / 1000000.0
+  [color=#00ff00]calc[/color] pow(2, 10)
+
+[color=#ffff55]NOTES[/color]
+  Division by zero and parse errors are reported as red error messages.
+
+""",
+# -------
+"exec": """[color=#ffff55]EXEC[/color]                                          [color=#888888]utility[/color]
+
+  [color=#00ff00]exec[/color] [color=#5555ff]<filename>[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Reads a plain-text file from [color=#888888]user://[/color] and executes each line as if
+  it were typed into the console. Useful for running batches of
+  commands or pre-defined debug scenarios.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]exec[/color] [color=#5555ff]<filename>[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<filename>[/color]   Name of the script file without extension. The file must
+              exist at [color=#888888]user://<filename>.txt[/color].
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]exec[/color] setup
+  [color=#00ff00]exec[/color] benchmark
+
+[color=#ffff55]NOTES[/color]
+  The [color=#888888]user://[/color] directory is platform-specific. On Linux it is typically
+  [color=#888888]~/.local/share/<project_name>/[/color].
+  Blank lines and unrecognised commands are silently skipped.
+
+""",
+# ---- Display ----
+"console_full": """[color=#ffff55]CONSOLE POSITION[/color]                             [color=#888888]display[/color]
+
+  [color=#00ff00]console full[/color]
+  [color=#00ff00]console bottom[/color]
+  [color=#00ff00]console top[/color]
+  [color=#00ff00]console left[/color]
+  [color=#00ff00]console right[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Repositions and resizes the console overlay to one of five preset
+  layouts. The change takes effect immediately.
+
+    [color=#00ff00]console full[/color]    Covers the entire game window
+    [color=#00ff00]console bottom[/color]  Occupies the bottom half
+    [color=#00ff00]console top[/color]     Occupies the top half
+    [color=#00ff00]console left[/color]    Occupies the left half
+    [color=#00ff00]console right[/color]   Occupies the right half
+
+  The position can also be cycled at runtime with [color=#5555ff]Ctrl+~[/color].
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]console full[/color]
+  [color=#00ff00]console bottom[/color]
+  [color=#00ff00]console top[/color]
+  [color=#00ff00]console left[/color]
+  [color=#00ff00]console right[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]transparency[/color]
+
+""",
+# -------
+"transparency": """[color=#ffff55]TRANSPARENCY[/color]                                 [color=#888888]display[/color]
+
+  [color=#00ff00]transparency[/color] [color=#5555ff]<level>[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Sets the opacity of the console background panel.
+  [color=#888888]0[/color] makes the background fully opaque; [color=#888888]100[/color] makes it completely
+  invisible (the text remains readable either way).
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]transparency[/color] [color=#5555ff]<level>[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<level>[/color]   Integer or float from [color=#888888]0[/color] (opaque) to [color=#888888]100[/color] (invisible).
+            Values outside this range are clamped automatically.
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]transparency[/color] 0
+  [color=#00ff00]transparency[/color] 50
+  [color=#00ff00]transparency[/color] 85
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]console full[/color]
+
+""",
+# ---- Time ----
+"timescale": """[color=#ffff55]TIMESCALE[/color]                                    [color=#888888]time[/color]
+
+  [color=#00ff00]timescale[/color] [color=#5555ff]<speed>[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Sets [color=#888888]Engine.time_scale[/color], which scales the speed of physics,
+  animations, and all [color=#888888]_process[/color] / [color=#888888]_physics_process[/color] delta values.
+  A value of [color=#888888]1.0[/color] is normal speed.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]timescale[/color] [color=#5555ff]<speed>[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<speed>[/color]   Positive float. [color=#888888]0.5[/color] = half speed, [color=#888888]2.0[/color] = double speed.
+            Minimum is [color=#888888]0.0[/color] (frozen time). There is no maximum.
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]timescale[/color] 1.0
+  [color=#00ff00]timescale[/color] 0.5
+  [color=#00ff00]timescale[/color] 2.0
+  [color=#00ff00]timescale[/color] 0.0
+
+[color=#ffff55]NOTES[/color]
+  This affects the entire engine. Input processing and the console
+  itself are not slowed down.
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]pause[/color]  [color=#00ff00]physics toggle[/color]
+
+""",
+# ---- Scene ----
+"pause": """[color=#ffff55]PAUSE / UNPAUSE[/color]                              [color=#888888]scene[/color]
+
+  [color=#00ff00]pause[/color]
+  [color=#00ff00]unpause[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Sets [color=#888888]SceneTree.paused[/color]. When paused, all nodes that do not have
+  their process mode set to [color=#888888]PROCESS_MODE_ALWAYS[/color] stop executing
+  [color=#888888]_process[/color] and [color=#888888]_physics_process[/color]. The console itself remains
+  interactive while the game is paused.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]pause[/color]
+  [color=#00ff00]unpause[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]timescale[/color]  [color=#00ff00]physics toggle[/color]
+
+""",
+# -------
+"restart": """[color=#ffff55]RESTART[/color]                                      [color=#888888]scene[/color]
+
+  [color=#00ff00]restart[/color]  [color=#888888]alias:[/color] [color=#00ff00]reload[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Calls [color=#888888]SceneTree.reload_current_scene()[/color], which tears down the
+  current scene and reloads it from disk. All runtime state is lost.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]restart[/color]
+  [color=#00ff00]reload[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]load scene[/color]  [color=#00ff00]scene info[/color]
+
+""",
+# -------
+"load_scene": """[color=#ffff55]LOAD SCENE[/color]                                   [color=#888888]scene[/color]
+
+  [color=#00ff00]load scene[/color] [color=#5555ff]<scene_path>[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Transitions to a different scene using
+  [color=#888888]SceneTree.change_scene_to_file()[/color]. The current scene is freed
+  and the target scene is loaded in its place.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]load scene[/color] [color=#5555ff]<scene_path>[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<scene_path>[/color]   Path to a [color=#888888].tscn[/color] file. Accepts any of:
+                 • Full path:  [color=#888888]res://levels/world.tscn[/color]
+                 • No prefix:  [color=#888888]levels/world[/color]  (res:// is prepended)
+                 • No ext:     [color=#888888]res://levels/world[/color]  (.tscn appended)
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]load scene[/color] res://main.tscn
+  [color=#00ff00]load scene[/color] levels/dungeon
+  [color=#00ff00]load scene[/color] main
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]list scenes[/color]  [color=#00ff00]restart[/color]  [color=#00ff00]scene info[/color]
+
+""",
+# -------
+"list_scenes": """[color=#ffff55]LIST SCENES[/color]                                  [color=#888888]scene[/color]
+
+  [color=#00ff00]list scenes[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Recursively scans the [color=#888888]res://[/color] directory (excluding [color=#888888]addons/[/color]) and
+  prints the path of every [color=#888888].tscn[/color] file found.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]list scenes[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]load scene[/color]  [color=#00ff00]scene info[/color]
+
+""",
+# -------
+"scene_info": """[color=#ffff55]SCENE INFO[/color]                                   [color=#888888]scene[/color]
+
+  [color=#00ff00]scene info[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Displays metadata about the currently active scene: its name,
+  [color=#888888]res://[/color] path, root node type, and total node count.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]scene info[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]print tree[/color]  [color=#00ff00]list scenes[/color]  [color=#00ff00]restart[/color]
+
+""",
+# ---- Inspection ----
+"print_tree": """[color=#ffff55]PRINT TREE[/color]                                   [color=#888888]inspection[/color]
+
+  [color=#00ff00]print tree[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Recursively prints every node in the current scene tree, indented
+  to reflect nesting depth. Each entry shows the node name, class,
+  and (when applicable) its [color=#888888].tscn[/color] path for instanced sub-scenes.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]print tree[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]print node[/color]  [color=#00ff00]scene info[/color]
+
+""",
+# -------
+"print_node": """[color=#ffff55]PRINT NODE[/color]                                   [color=#888888]inspection[/color]
+
+  [color=#00ff00]print node[/color] [color=#5555ff]<node_path>[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Prints detailed information about a specific node: its path,
+  owner, child count, scene file, position (for Node2D/Node3D),
+  attached script, and all script-level exported variables.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]print node[/color] [color=#5555ff]<node_path>[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<node_path>[/color]   A NodePath relative to the current scene root, or an
+               absolute path from [color=#888888]/root[/color].
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]print node[/color] Player
+  [color=#00ff00]print node[/color] Player/Sprite2D
+  [color=#00ff00]print node[/color] /root/Main/HUD
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]print tree[/color]  [color=#00ff00]list autoloads[/color]
+
+""",
+# -------
+"list_autoloads": """[color=#ffff55]LIST AUTOLOADS[/color]                               [color=#888888]inspection[/color]
+
+  [color=#00ff00]list autoloads[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Lists every autoload singleton registered in the project. For each
+  entry the console shows the node name, its Godot class, and the
+  path to its attached script.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]list autoloads[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]print node[/color]  [color=#00ff00]engine info[/color]
+
+""",
+# -------
+"engine_info": """[color=#ffff55]ENGINE INFO[/color]                                  [color=#888888]inspection[/color]
+
+  [color=#00ff00]engine info[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Displays information about the running Godot engine and project:
+  • Godot version and status string
+  • Project name and version (from ProjectSettings)
+  • Rendering method
+  • GPU adapter name
+  • Host OS name and version
+  • Whether this is a debug build
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]engine info[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]fps[/color]  [color=#00ff00]mem[/color]  [color=#00ff00]vsync[/color]
+
+""",
+# ---- Performance ----
+"fps": """[color=#ffff55]FPS[/color]                                           [color=#888888]performance[/color]
+
+  [color=#00ff00]fps[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Prints a one-line snapshot of the current frames-per-second and
+  the corresponding frame time in milliseconds, sampled at the moment
+  the command is executed.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]fps[/color]
+
+[color=#ffff55]NOTES[/color]
+  This is a point-in-time reading. For continuous monitoring consider
+  Godot's built-in [color=#888888]Profiler[/color] or the [color=#888888]Performance[/color] singleton.
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]mem[/color]  [color=#00ff00]engine info[/color]  [color=#00ff00]vsync[/color]
+
+""",
+# -------
+"mem": """[color=#ffff55]MEM[/color]                                           [color=#888888]performance[/color]
+
+  [color=#00ff00]mem[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Prints current static memory usage and the peak usage recorded
+  since the process started. In debug builds additional counters are
+  shown: total object count, node count, orphan node count, and
+  resource count.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]mem[/color]
+
+[color=#ffff55]NOTES[/color]
+  Object/node counters are only available in debug builds. They will
+  not appear in exported release builds.
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]fps[/color]  [color=#00ff00]engine info[/color]
+
+""",
+# -------
+"vsync": """[color=#ffff55]VSYNC[/color]                                         [color=#888888]performance[/color]
+
+  [color=#00ff00]vsync[/color] [color=#666666][mode][/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Gets or sets the VSync mode for the main window.
+  When called with no argument the current mode is printed.
+  When called with a mode name the display server is updated
+  immediately.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]vsync[/color]
+  [color=#00ff00]vsync[/color] [color=#666666][mode][/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#666666][mode][/color]   One of the following (case-insensitive):
+          [color=#888888]disabled[/color]   — no synchronisation (may tear)
+          [color=#888888]enabled[/color]    — standard VSync (cap to refresh rate)
+          [color=#888888]adaptive[/color]   — VSync when above refresh rate, free otherwise
+          [color=#888888]mailbox[/color]    — low-latency triple buffering
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]vsync[/color]
+  [color=#00ff00]vsync[/color] disabled
+  [color=#00ff00]vsync[/color] adaptive
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]fps[/color]  [color=#00ff00]engine info[/color]
+
+""",
+# -------
+"physics_toggle": """[color=#ffff55]PHYSICS TOGGLE[/color]                               [color=#888888]performance[/color]
+
+  [color=#00ff00]physics toggle[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Toggles physics processing for the entire current scene by setting
+  the root node's [color=#888888]process_mode[/color] to [color=#888888]PROCESS_MODE_DISABLED[/color] or back
+  to [color=#888888]PROCESS_MODE_INHERIT[/color]. Call again to re-enable.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]physics toggle[/color]
+
+[color=#ffff55]NOTES[/color]
+  This affects the whole scene subtree. Nodes that explicitly set
+  their own [color=#888888]process_mode[/color] will not be affected.
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]pause[/color]  [color=#00ff00]timescale[/color]
+
+""",
+# ---- Audio ----
+"mute": """[color=#ffff55]MUTE / UNMUTE[/color]                                [color=#888888]audio[/color]
+
+  [color=#00ff00]mute[/color]
+  [color=#00ff00]unmute[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Mutes or unmutes the [color=#888888]Master[/color] audio bus without changing its volume
+  level, so [color=#00ff00]unmute[/color] restores the previous volume exactly.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]mute[/color]
+  [color=#00ff00]unmute[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]volume[/color]  [color=#00ff00]list buses[/color]
+
+""",
+# -------
+"volume": """[color=#ffff55]VOLUME[/color]                                        [color=#888888]audio[/color]
+
+  [color=#00ff00]volume[/color] [color=#5555ff]<level>[/color]
+  [color=#00ff00]volume up[/color]
+  [color=#00ff00]volume down[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Sets the [color=#888888]Master[/color] bus volume.
+    [color=#00ff00]volume[/color] [color=#5555ff]<level>[/color]  — set to an exact linear value (0.0 – 1.0)
+    [color=#00ff00]volume up[/color]      — increase by 10 percentage points
+    [color=#00ff00]volume down[/color]    — decrease by 10 percentage points
+
+  Setting volume to [color=#888888]0.0[/color] also mutes the bus automatically.
+  Setting it above [color=#888888]0.0[/color] unmutes it.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]volume[/color] [color=#5555ff]<level>[/color]
+  [color=#00ff00]volume up[/color]
+  [color=#00ff00]volume down[/color]
+
+[color=#ffff55]ARGUMENTS[/color]
+  [color=#5555ff]<level>[/color]   Float from [color=#888888]0.0[/color] (silent) to [color=#888888]1.0[/color] (full). Values outside this
+            range are clamped automatically.
+
+[color=#ffff55]EXAMPLES[/color]
+  [color=#00ff00]volume[/color] 1.0
+  [color=#00ff00]volume[/color] 0.5
+  [color=#00ff00]volume[/color] 0.0
+  [color=#00ff00]volume up[/color]
+  [color=#00ff00]volume down[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]mute[/color]  [color=#00ff00]list buses[/color]
+
+""",
+# -------
+"list_buses": """[color=#ffff55]LIST BUSES[/color]                                   [color=#888888]audio[/color]
+
+  [color=#00ff00]list buses[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Lists every audio bus configured in the AudioServer, showing its
+  name, current volume as a percentage, mute status, and send target
+  (the bus it feeds into, if any).
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]list buses[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]mute[/color]  [color=#00ff00]volume[/color]
+
+""",
+	}
 
 
 # ---- Physics ----
