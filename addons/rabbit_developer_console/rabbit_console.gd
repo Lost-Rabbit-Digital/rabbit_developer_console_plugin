@@ -326,28 +326,33 @@ func autocomplete() -> void:
 		if (" " in line_edit.text): # We're searching for a parameter to autocomplete
 			var split_text := parse_line_input(line_edit.text)
 			if (split_text.size() > 1):
-				var command := split_text[0]
-				var param_input := split_text[1]
-				if (command_parameters.has(command)):
-					for param in command_parameters[command]:
-						if (param_input in param):
-							suggestions.append(str(command, " ", param))
+				var cmd_match := _match_command_from_tokens(split_text)
+				var matched_cmd : String = cmd_match[0]
+				var consumed : int = cmd_match[1]
+				if matched_cmd != "" and consumed < split_text.size():
+					var param_input := split_text[consumed]
+					if (command_parameters.has(matched_cmd)):
+						var cmd_display := matched_cmd.replace("_", " ")
+						for param in command_parameters[matched_cmd]:
+							if (param_input in param):
+								suggestions.append(str(cmd_display, " ", param))
 		else:
 			var sorted_commands := []
 			for command in console_commands:
 				if (!console_commands[command].hidden):
-					sorted_commands.append(str(command))
+					sorted_commands.append(command.replace("_", " "))
 			sorted_commands.sort()
 			sorted_commands.reverse()
 
+			var search_text := line_edit.text.replace("_", " ")
 			var prev_index := 0
-			for command in sorted_commands:
-				if (!line_edit.text || command.contains(line_edit.text)):
-					var index : int = command.find(line_edit.text)
+			for command_display in sorted_commands:
+				if (!search_text || command_display.contains(search_text)):
+					var index : int = command_display.find(search_text)
 					if (index <= prev_index):
-						suggestions.push_front(command)
+						suggestions.push_front(command_display)
 					else:
-						suggestions.push_back(command)
+						suggestions.push_back(command_display)
 					prev_index = index
 		autocomplete()
 
@@ -514,6 +519,19 @@ func parse_line_input(text : String) -> PackedStringArray:
 	return out_array
 
 
+# Returns [command_name, num_tokens_consumed] for the longest matching command
+# formed by joining tokens with underscores. Returns ["", 0] if no match found.
+func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
+	var best_match := ""
+	var best_count := 0
+	for i in range(1, tokens.size() + 1):
+		var candidate := "_".join(tokens.slice(0, i))
+		if console_commands.has(candidate):
+			best_match = candidate
+			best_count = i
+	return [best_match, best_count]
+
+
 func _on_text_entered(new_text : String) -> void:
 	scroll_to_bottom()
 	reset_autocomplete()
@@ -526,10 +544,12 @@ func _on_text_entered(new_text : String) -> void:
 		add_input_history(new_text)
 		print_line(_get_prompt() + " " + new_text)
 		var text_split := parse_line_input(new_text)
-		var text_command := text_split[0]
+		var match_result := _match_command_from_tokens(text_split)
+		var text_command : String = match_result[0]
+		var tokens_consumed : int = match_result[1]
 
-		if console_commands.has(text_command):
-			var arguments := text_split.slice(1)
+		if text_command != "":
+			var arguments := text_split.slice(tokens_consumed)
 			var console_command : ConsoleCommand = console_commands[text_command]
 
 			# calc is a especial command that needs special treatment
@@ -541,7 +561,7 @@ func _on_text_entered(new_text : String) -> void:
 				return
 
 			if (arguments.size() < console_command.required):
-				print_error("%s: missing operand. Required %d argument(s)" % [text_command, console_command.required])
+				print_error("%s: missing operand. Required %d argument(s)" % [text_command.replace("_", " "), console_command.required])
 				return
 			elif (arguments.size() > console_command.arguments.size()):
 				arguments.resize(console_command.arguments.size())
@@ -552,11 +572,12 @@ func _on_text_entered(new_text : String) -> void:
 
 			console_command.function.callv(arguments)
 		else:
-			console_unknown_command.emit(text_command)
-			print_error("%s: command not found" % text_command)
-			var suggestion := _find_similar_command(text_command)
+			var first_token := text_split[0]
+			console_unknown_command.emit(first_token)
+			print_error("%s: command not found" % first_token)
+			var suggestion := _find_similar_command("_".join(text_split))
 			if suggestion != "":
-				print_line("[color=#cccccc]-bash: did you mean '[color=#00ff00]%s[/color]'?[/color]" % suggestion)
+				print_line("[color=#cccccc]-bash: did you mean '[color=#00ff00]%s[/color]'?[/color]" % suggestion.replace("_", " "))
 
 
 func _on_line_edit_text_changed(new_text : String) -> void:
@@ -584,31 +605,52 @@ func _update_hint_text(text : String) -> void:
 
 
 func _get_best_hint(text : String) -> String:
-	if " " in text:
-		# Try to hint a parameter
-		var split := parse_line_input(text)
-		if split.size() >= 2:
-			var command := split[0]
-			var param_input := split[split.size() - 1]
-			if command_parameters.has(command) and !param_input.is_empty():
-				for param in command_parameters[command]:
-					if param.begins_with(param_input):
-						return command + " " + param
+	if text.is_empty():
 		return ""
-	else:
-		# Find best matching command (prefix match first)
-		var best := ""
-		for command in console_commands:
-			if console_commands[command].hidden:
-				continue
-			if command.begins_with(text):
-				if best.is_empty() or command.length() < best.length():
-					best = command
-		# Also check history for prefix match
+	var split := parse_line_input(text)
+	# Strip trailing empty token produced when text ends with a space
+	while split.size() > 0 and split.back() == "":
+		split.resize(split.size() - 1)
+	if split.is_empty():
+		return ""
+
+	var match_result := _match_command_from_tokens(split)
+	var matched_cmd : String = match_result[0]
+	var tokens_consumed : int = match_result[1]
+
+	if matched_cmd != "" and tokens_consumed < split.size():
+		# Command matched with remaining tokens — try parameter hint
+		var param_input := split[split.size() - 1]
+		var cmd_display := matched_cmd.replace("_", " ")
+		if command_parameters.has(matched_cmd) and !param_input.is_empty():
+			for param in command_parameters[matched_cmd]:
+				if param.begins_with(param_input):
+					return cmd_display + " " + param
+		return ""
+
+	if matched_cmd != "":
+		# Exact command typed with no parameters yet — only hint history
 		for i in range(console_history.size() - 1, -1, -1):
 			if console_history[i].begins_with(text) and console_history[i] != text:
 				return console_history[i]
-		return best
+		return ""
+
+	# No full command match — try prefix match against command names with spaces
+	var text_normalized := "_".join(split)
+	var best := ""
+	for command in console_commands:
+		if console_commands[command].hidden:
+			continue
+		if command.begins_with(text_normalized):
+			if best.is_empty() or command.length() < best.length():
+				best = command
+	if best != "":
+		return best.replace("_", " ")
+	# Also check history for prefix match
+	for i in range(console_history.size() - 1, -1, -1):
+		if console_history[i].begins_with(text) and console_history[i] != text:
+			return console_history[i]
+	return ""
 
 
 func add_input_history(text : String) -> void:
