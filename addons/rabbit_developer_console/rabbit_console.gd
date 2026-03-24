@@ -318,6 +318,14 @@ func _input(event : InputEvent) -> void:
 				toggle_console()
 				get_tree().get_root().set_input_as_handled()
 		if (control.visible and event.pressed):
+			if (event.physical_keycode == KEY_BRACKETLEFT and event.is_command_or_control_pressed()): # Ctrl+[ decrease transparency
+				bg_transparency = clampf(bg_transparency - 0.05, 0.0, 1.0)
+				set_bg_transparency(bg_transparency)
+				get_tree().get_root().set_input_as_handled()
+			elif (event.physical_keycode == KEY_BRACKETRIGHT and event.is_command_or_control_pressed()): # Ctrl+] increase transparency
+				bg_transparency = clampf(bg_transparency + 0.05, 0.0, 1.0)
+				set_bg_transparency(bg_transparency)
+				get_tree().get_root().set_input_as_handled()
 			if (event.get_physical_keycode_with_modifiers() == KEY_UP):
 				get_tree().get_root().set_input_as_handled()
 				if _dropdown_panel.visible and _dropdown_matches.size() > 0:
