@@ -49,6 +49,7 @@ var console_history_index := 0
 var was_paused_already := false
 var _error_occurred := false
 var _builtin_commands : RefCounted
+var _builtin_command_names : PackedStringArray
 
 var _dropdown_panel := Panel.new()
 var _dropdown_vbox := VBoxContainer.new()
@@ -471,6 +472,7 @@ func _ready() -> void:
 	var BuiltinCommands := load("res://addons/rabbit_developer_console/builtin_commands.gd")
 	_builtin_commands = BuiltinCommands.new(self)
 	_builtin_commands.register_all()
+	_builtin_command_names = PackedStringArray(console_commands.keys())
 
 
 func _input(event : InputEvent) -> void:
