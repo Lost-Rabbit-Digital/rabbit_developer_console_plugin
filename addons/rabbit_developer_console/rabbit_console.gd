@@ -136,6 +136,8 @@ func _enter_tree() -> void:
 	rich_label.add_theme_color_override("selection_color", Color(0.2, 0.4, 0.7, 0.5))
 	rich_label.add_theme_color_override("font_color_link", Color(0.33, 0.67, 1.0, 1.0))
 	rich_label.meta_clicked.connect(_on_console_link_clicked)
+	rich_label.meta_hover_started.connect(_on_meta_hover_started)
+	rich_label.meta_hover_ended.connect(_on_meta_hover_ended)
 	if font_size > 0:
 		rich_label.add_theme_font_size_override("normal_font_size", font_size)
 		rich_label.add_theme_font_size_override("bold_font_size", font_size)
@@ -199,7 +201,36 @@ func _enter_tree() -> void:
 
 
 func _on_console_link_clicked(meta : Variant) -> void:
-	OS.shell_open(str(meta))
+	var meta_str := str(meta)
+	if meta_str.begins_with("node://"):
+		return
+	OS.shell_open(meta_str)
+
+
+var _hover_highlighted_node : CanvasItem = null
+var _hover_original_modulate : Color = Color.WHITE
+const _HOVER_HIGHLIGHT_COLOR := Color(0.0, 1.0, 0.5, 1.0)
+
+
+func _on_meta_hover_started(meta : Variant) -> void:
+	var meta_str := str(meta)
+	if not meta_str.begins_with("node://"):
+		return
+	var node_path := meta_str.substr("node://".length())
+	var scene_root := get_tree().current_scene
+	if not scene_root:
+		return
+	var node := scene_root.get_node_or_null(node_path)
+	if node is CanvasItem:
+		_hover_highlighted_node = node
+		_hover_original_modulate = node.modulate
+		node.modulate = _HOVER_HIGHLIGHT_COLOR
+
+
+func _on_meta_hover_ended(meta : Variant) -> void:
+	if _hover_highlighted_node and is_instance_valid(_hover_highlighted_node):
+		_hover_highlighted_node.modulate = _hover_original_modulate
+	_hover_highlighted_node = null
 
 
 func _get_hostname() -> String:

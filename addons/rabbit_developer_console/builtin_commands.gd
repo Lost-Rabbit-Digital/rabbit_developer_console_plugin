@@ -463,7 +463,8 @@ func print_tree_cmd() -> void:
 
 func _print_node_recursive(node : Node, indent : String) -> void:
 	var type_color := "#5555ff"
-	var name_str := "[color=#00ff00]%s[/color] [color=%s](%s)[/color]" % [node.name, type_color, node.get_class()]
+	var node_path := str(console.get_tree().current_scene.get_path_to(node))
+	var name_str := "[url=node://%s][color=#00ff00]%s[/color] [color=%s](%s)[/color][/url]" % [node_path, node.name, type_color, node.get_class()]
 	if node.scene_file_path and node != console.get_tree().current_scene:
 		name_str += " [color=#666666]@ %s[/color]" % node.scene_file_path
 	console.print_line("%s%s" % [indent, name_str])
