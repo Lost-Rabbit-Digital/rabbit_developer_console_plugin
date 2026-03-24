@@ -47,6 +47,7 @@ var command_parameters := {}
 var console_history := []
 var console_history_index := 0
 var was_paused_already := false
+var _error_occurred := false
 var _builtin_commands : RefCounted
 
 var _dropdown_panel := Panel.new()
@@ -576,6 +577,7 @@ func scroll_to_bottom() -> void:
 
 
 func print_error(text : Variant, print_godot := false) -> void:
+	_error_occurred = true
 	if not text is String:
 		text = str(text)
 	print_line("[color=#ff4444]-bash: error:[/color] %s" % text, print_godot)
@@ -691,6 +693,7 @@ func _on_text_entered(new_text : String) -> void:
 	if not new_text.strip_edges().is_empty():
 		add_input_history(new_text)
 		print_line(_get_prompt() + " " + new_text)
+		_error_occurred = false
 		var text_split := parse_line_input(new_text)
 		var match_result := _match_command_from_tokens(text_split)
 		var text_command : String = match_result[0]
@@ -706,10 +709,15 @@ func _on_text_entered(new_text : String) -> void:
 				for word in arguments:
 					expression += word
 				console_command.function.callv([expression])
+				if _error_occurred:
+					line_edit.text = new_text
+					line_edit.caret_column = new_text.length()
 				return
 
 			if (arguments.size() < console_command.required):
 				print_error("%s: missing operand. Required %d argument(s)" % [text_command.replace("_", " "), console_command.required])
+				line_edit.text = new_text
+				line_edit.caret_column = new_text.length()
 				return
 			elif (arguments.size() > console_command.arguments.size()):
 				arguments.resize(console_command.arguments.size())
@@ -730,6 +738,10 @@ func _on_text_entered(new_text : String) -> void:
 			var suggestion := _find_similar_command("_".join(text_split))
 			if suggestion != "":
 				print_line("[color=#cccccc]-bash: did you mean '[url=cmd://%s][color=#00ff00]%s[/color][/url]'?[/color]" % [suggestion, suggestion.replace("_", " ")])
+
+		if _error_occurred:
+			line_edit.text = new_text
+			line_edit.caret_column = new_text.length()
 
 
 func _on_line_edit_text_changed(new_text : String) -> void:
