@@ -496,6 +496,9 @@ func _on_text_entered(new_text : String) -> void:
 		else:
 			console_unknown_command.emit(text_command)
 			print_error("%s: command not found" % text_command)
+			var suggestion := _find_similar_command(text_command)
+			if suggestion != "":
+				print_line("[color=#cccccc]-bash: did you mean '[color=#00ff00]%s[/color]'?[/color]" % suggestion)
 
 
 func _on_line_edit_text_changed(new_text : String) -> void:
@@ -514,5 +517,43 @@ func set_enable_on_release_build(enable : bool):
 	if (!enable_on_release_build):
 		if (!OS.is_debug_build()):
 			disable()
+
+
+func _find_similar_command(input : String) -> String:
+	var best_match := ""
+	var best_distance := INF
+	var max_distance : int = max(3, ceili(input.length() * 0.5))
+	for command_name in console_commands:
+		if console_commands[command_name].hidden:
+			continue
+		var dist := _levenshtein_distance(input.to_lower(), command_name.to_lower())
+		if dist < best_distance:
+			best_distance = dist
+			best_match = command_name
+	if best_distance <= max_distance:
+		return best_match
+	return ""
+
+
+func _levenshtein_distance(a : String, b : String) -> int:
+	var len_a := a.length()
+	var len_b := b.length()
+	if len_a == 0:
+		return len_b
+	if len_b == 0:
+		return len_a
+	var prev_row : Array[int] = []
+	prev_row.resize(len_b + 1)
+	for j in range(len_b + 1):
+		prev_row[j] = j
+	for i in range(1, len_a + 1):
+		var curr_row : Array[int] = []
+		curr_row.resize(len_b + 1)
+		curr_row[0] = i
+		for j in range(1, len_b + 1):
+			var cost := 0 if a[i - 1] == b[j - 1] else 1
+			curr_row[j] = mini(mini(curr_row[j - 1] + 1, prev_row[j] + 1), prev_row[j - 1] + cost)
+		prev_row = curr_row
+	return prev_row[len_b]
 
 
