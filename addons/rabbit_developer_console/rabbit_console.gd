@@ -360,6 +360,18 @@ func _input(event : InputEvent) -> void:
 			if (event.get_physical_keycode_with_modifiers() == KEY_TAB):
 				autocomplete()
 				get_tree().get_root().set_input_as_handled()
+			if (event.physical_keycode == KEY_EQUAL and event.is_command_or_control_pressed()): # Ctrl+= to zoom in
+				if font_size <= 0:
+					font_size = 16
+				font_size = min(128, font_size + 2)
+				_update_font_size()
+				get_tree().get_root().set_input_as_handled()
+			if (event.physical_keycode == KEY_MINUS and event.is_command_or_control_pressed()): # Ctrl+- to zoom out
+				if font_size <= 0:
+					font_size = 16
+				font_size = max(8, font_size - 2)
+				_update_font_size()
+				get_tree().get_root().set_input_as_handled()
 	elif event is InputEventMouseButton:
 				if (control.visible):
 					if (event.is_command_or_control_pressed()):
