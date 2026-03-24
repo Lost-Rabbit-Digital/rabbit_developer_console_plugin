@@ -18,7 +18,7 @@ func _enter_tree():
 	ProjectSettings.set_as_basic(CONSOLE_THEME, true)
 	ProjectSettings.save()
 
-	add_autoload_singleton("Console", "res://addons/console/console.gd")
+	add_autoload_singleton("Console", "res://addons/rabbit_developer_console/rabbit_console.gd")
 
 	print("Console plugin activated.")
 

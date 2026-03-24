@@ -178,10 +178,18 @@ func _get_prompt() -> String:
 	return "[color=#00ff00]user@%s[/color][color=#cccccc]:[/color][color=#5c5cff]~[/color][color=#cccccc]$[/color]" % _get_hostname()
 
 
+func _get_plugin_version() -> String:
+	var config := ConfigFile.new()
+	if config.load("res://addons/rabbit_developer_console/plugin.cfg") == OK:
+		return config.get_value("plugin", "version", "unknown")
+	return "unknown"
+
+
 func _print_motd() -> void:
 	var hostname := _get_hostname()
 	rich_label.append_text("[color=#00ff00]%s login: user[/color]\n" % hostname)
-	rich_label.append_text("[color=#cccccc]Welcome to %s console v%s[/color]\n" % [hostname, "1.4.0"])
+	var plugin_version := _get_plugin_version()
+	rich_label.append_text("[color=#cccccc]Welcome to %s console v%s[/color]\n" % [hostname, plugin_version])
 	rich_label.append_text("[color=#666666] * Documentation:  Type 'help' for built-in commands[/color]\n")
 	rich_label.append_text("[color=#666666] * Command list:   Type 'commands' or 'commands_list'[/color]\n")
 	rich_label.append_text("[color=#666666]Last login: %s on tty1[/color]\n\n" % Time.get_datetime_string_from_system())
