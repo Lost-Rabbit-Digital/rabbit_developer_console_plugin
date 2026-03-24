@@ -18,6 +18,7 @@ func register_all() -> void:
 	console.add_command("help", help, ["command"], 0, "Displays instructions on how to use the console. Pass a command name for detailed help.")
 	console.add_command("commands_list", commands_list, 0, 0, "Lists all commands and their descriptions.")
 	console.add_command("commands", commands, 0, 0, "Lists commands with no descriptions.")
+	console.add_command("close", close, 0, 0, "Closes the console window.")
 	console.add_command("discord", discord, 0, 0, "Prints the link to the Rabbit Developer Console Discord server.")
 
 	# Output
@@ -84,6 +85,10 @@ func register_all() -> void:
 
 func quit() -> void:
 	console.get_tree().quit()
+
+
+func close() -> void:
+	console.toggle_console()
 
 
 func clear() -> void:
