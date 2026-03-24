@@ -25,11 +25,13 @@ class ConsoleCommand:
 	var required : int
 	var description : String
 	var hidden : bool
-	func _init(in_function : Callable, in_arguments : PackedStringArray, in_required : int = 0, in_description : String = ""):
+	var defaults : PackedStringArray
+	func _init(in_function : Callable, in_arguments : PackedStringArray, in_required : int = 0, in_description : String = "", in_defaults : PackedStringArray = PackedStringArray()):
 		function = in_function
 		arguments = in_arguments
 		required = in_required
 		description = in_description
+		defaults = in_defaults
 
 var theme : Theme
 var control := Control.new()
@@ -56,20 +58,23 @@ var _dropdown_selected := -1
 const _MAX_DROPDOWN_ITEMS := 12
 const _DROPDOWN_ITEM_HEIGHT := 24
 
-## Usage: Console.add_command("command_name", <function to call>, <number of arguments or array of argument names>, <required number of arguments>, "Help description")
-func add_command(command_name : String, function : Callable, arguments = [], required: int = 0, description : String = "") -> void:
+## Usage: Console.add_command("command_name", <function to call>, <number of arguments or array of argument names>, <required number of arguments>, "Help description", <array of default values for optional arguments>)
+func add_command(command_name : String, function : Callable, arguments = [], required: int = 0, description : String = "", defaults : Array = []) -> void:
+	var str_defaults : PackedStringArray
+	for d in defaults:
+		str_defaults.append(str(d))
 	if (arguments is int):
 		# Legacy call using an argument number
 		var param_array : PackedStringArray
 		for i in range(arguments):
 			param_array.append("arg_" + str(i + 1))
-		console_commands[command_name] = ConsoleCommand.new(function, param_array, required, description)
+		console_commands[command_name] = ConsoleCommand.new(function, param_array, required, description, str_defaults)
 	elif (arguments is Array):
 		# New array argument system
 		var str_args : PackedStringArray
 		for argument in arguments:
 			str_args.append(str(argument))
-		console_commands[command_name] = ConsoleCommand.new(function, str_args, required, description)
+		console_commands[command_name] = ConsoleCommand.new(function, str_args, required, description, str_defaults)
 
 
 ## Adds a secret command that will not show up in the help or auto-complete.
@@ -612,9 +617,13 @@ func _on_text_entered(new_text : String) -> void:
 			elif (arguments.size() > console_command.arguments.size()):
 				arguments.resize(console_command.arguments.size())
 
-			# Functions fail to call if passed the incorrect number of arguments, so fill out with blank strings.
+			# Functions fail to call if passed the incorrect number of arguments, so fill with defaults or blank strings.
 			while (arguments.size() < console_command.arguments.size()):
-				arguments.append("")
+				var i := arguments.size()
+				if i < console_command.defaults.size():
+					arguments.append(console_command.defaults[i])
+				else:
+					arguments.append("")
 
 			console_command.function.callv(arguments)
 		else:
