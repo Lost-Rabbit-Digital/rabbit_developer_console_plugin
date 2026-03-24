@@ -29,6 +29,7 @@ func register_all() -> void:
 	# Utility
 	console.add_command("calc", calculate, ["mathematical expression to evaluate"], 0, "Evaluates the math passed in for quick arithmetic.")
 	console.add_command("exec", exec, ["filename"], 1, "Execute a script.")
+	console.add_command("list_scripts", list_scripts, 0, 0, "Lists all script .txt files in the user:// directory.")
 
 	# Scene management
 	console.add_command("pause", pause, 0, 0, "Pauses node processing.")
@@ -222,6 +223,26 @@ func exec(filename : String) -> void:
 			console._on_text_entered(script.get_line())
 	else:
 		console.print_error("%s: No such file or directory" % [path])
+
+
+func list_scripts() -> void:
+	var dir := DirAccess.open("user://")
+	if not dir:
+		console.print_warning("Could not open user:// directory.")
+		return
+	var scripts : PackedStringArray
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name:
+		if not dir.current_is_dir() and file_name.ends_with(".txt") and file_name != "console_history.txt":
+			scripts.append(file_name)
+		file_name = dir.get_next()
+	if scripts.is_empty():
+		console.print_warning("No script files found in user://")
+		return
+	console.print_line("[color=#ffff55]SCRIPTS (%d)[/color]" % scripts.size())
+	for script in scripts:
+		console.print_line("  %s" % script)
 
 
 # ---- Display ----
@@ -934,6 +955,22 @@ func _build_help_pages() -> Dictionary:
 
 [color=#ffff55]SEE ALSO[/color]
   [color=#00ff00]load scene[/color]  [color=#00ff00]scene info[/color]
+
+""",
+# -------
+"list_scripts": """[color=#ffff55]LIST SCRIPTS[/color]                                 [color=#888888]utility[/color]
+
+  [color=#00ff00]list scripts[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Lists all [color=#888888].txt[/color] script files stored in the [color=#888888]user://[/color] directory
+  that can be executed with the [color=#00ff00]exec[/color] command.
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]list scripts[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]exec[/color]
 
 """,
 # -------
