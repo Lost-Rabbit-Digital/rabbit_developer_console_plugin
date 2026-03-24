@@ -786,5 +786,3 @@ func _levenshtein_distance(a : String, b : String) -> int:
 			curr_row[j] = mini(mini(curr_row[j - 1] + 1, prev_row[j] + 1), prev_row[j - 1] + cost)
 		prev_row = curr_row
 	return prev_row[len_b]
-
-
