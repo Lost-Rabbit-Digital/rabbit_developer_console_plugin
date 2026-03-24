@@ -17,6 +17,10 @@ run/main_scene="uid://kdoodofub67l"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="uid://dbdiskknw1asj"
 
+[autoload]
+
+Console="*res://addons/rabbit_developer_console/rabbit_console.gd"
+
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/manage_user_data/plugin.cfg")
+enabled=PackedStringArray("res://addons/console/plugin.cfg")
