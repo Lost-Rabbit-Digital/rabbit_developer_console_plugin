@@ -767,7 +767,7 @@ func _get_best_hint(text : String) -> String:
 		return ""
 	var split := parse_line_input(text)
 	# Strip trailing empty token produced when text ends with a space
-	while split.size() > 0 and split.back() == "":
+	while split.size() > 0 and split[split.size() - 1] == "":
 		split.resize(split.size() - 1)
 	if split.is_empty():
 		return ""
