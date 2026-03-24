@@ -36,8 +36,11 @@ func register_all() -> void:
 	console.add_command("reload", restart_scene, 0, 0, "Restarts the current scene.")
 
 	# Display
-	console.add_command("fullscreen", fullscreen, 0, 0, "Sets the console to fullscreen mode.")
-	console.add_command("halfscreen", halfscreen, 0, 0, "Sets the console to half-screen mode.")
+	console.add_command("console_full", console_full, 0, 0, "Sets the console to full window mode.")
+	console.add_command("console_bottom", console_bottom, 0, 0, "Docks the console to the bottom half.")
+	console.add_command("console_top", console_top, 0, 0, "Docks the console to the top half.")
+	console.add_command("console_left", console_left, 0, 0, "Docks the console to the left half.")
+	console.add_command("console_right", console_right, 0, 0, "Docks the console to the right half.")
 	console.add_command("transparency", transparency, ["level 0-100"], 1, "Sets console background transparency (0=opaque, 100=invisible).")
 
 	# Audio
@@ -76,8 +79,11 @@ func help() -> void:
   [color=#00ff00]echo_info[/color]        Print an info message
   [color=#00ff00]echo_warning[/color]     Print a warning message
   [color=#00ff00]exec[/color]             Execute commands from a script file
-  [color=#00ff00]fullscreen[/color]       Set console to fullscreen mode
-  [color=#00ff00]halfscreen[/color]       Set console to half-screen mode
+  [color=#00ff00]console_full[/color]     Set console to full window mode
+  [color=#00ff00]console_bottom[/color]   Dock console to bottom half
+  [color=#00ff00]console_top[/color]      Dock console to top half
+  [color=#00ff00]console_left[/color]     Dock console to left half
+  [color=#00ff00]console_right[/color]    Dock console to right half
   [color=#00ff00]mute[/color] / [color=#00ff00]unmute[/color]   Toggle game audio
   [color=#00ff00]pause[/color]            Pause node processing
   [color=#00ff00]restart[/color] / [color=#00ff00]reload[/color] Restart the current scene
@@ -92,7 +98,7 @@ func help() -> void:
   [color=#5555ff]Up/Down[/color]           Navigate command history
   [color=#5555ff]PageUp/PageDown[/color]   Scroll output buffer
   [color=#5555ff]Tab[/color]              Auto-complete; press again to cycle
-  [color=#5555ff]Ctrl+~[/color]           Toggle fullscreen/half-screen
+  [color=#5555ff]Ctrl+~[/color]           Cycle console position
   [color=#5555ff]Ctrl+Scroll[/color]      Adjust font size
   [color=#5555ff]~ / Esc[/color]          Close console
 ")
@@ -158,14 +164,29 @@ func exec(filename : String) -> void:
 
 # ---- Display ----
 
-func fullscreen() -> void:
-	console.set_fullscreen()
-	console.print_info("Console set to fullscreen mode.")
+func console_full() -> void:
+	console.set_console_position(console.ConsolePosition.FULL)
+	console.print_info("Console set to full window mode.")
 
 
-func halfscreen() -> void:
-	console.set_halfscreen()
-	console.print_info("Console set to half-screen mode.")
+func console_bottom() -> void:
+	console.set_console_position(console.ConsolePosition.BOTTOM)
+	console.print_info("Console docked to bottom.")
+
+
+func console_top() -> void:
+	console.set_console_position(console.ConsolePosition.TOP)
+	console.print_info("Console docked to top.")
+
+
+func console_left() -> void:
+	console.set_console_position(console.ConsolePosition.LEFT)
+	console.print_info("Console docked to left.")
+
+
+func console_right() -> void:
+	console.set_console_position(console.ConsolePosition.RIGHT)
+	console.print_info("Console docked to right.")
 
 
 func transparency(level : String) -> void:
