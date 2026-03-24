@@ -37,8 +37,8 @@ func _ready() -> void:
 	Console.add_command("dvd_size", _cmd_size, ["size"], 1, "Set ALL DVD square sizes in pixels. Example: dvd_size 120")
 	Console.add_command("dvd_color", _cmd_color, ["color"], 1, "Set ALL DVD square colors by name (red, green, blue, etc). Example: dvd_color cyan")
 	Console.add_command("dvd_angle", _cmd_angle, ["degrees"], 1, "Set ALL DVD square bounce angles in degrees. Example: dvd_angle 60")
-	Console.add_command("create_dvd", _cmd_create_dvd, ["amount"], 0, "Spawn DVD square(s). Example: create_dvd 32")
-	Console.add_command("delete_dvd", _cmd_delete_dvd, ["amount"], 0, "Remove DVD square(s). Example: delete_dvd 32")
+	Console.add_command("create_dvd", _cmd_create_dvd, ["amount"], 0, "Spawn DVD square(s). Example: create_dvd 32", ["1"])
+	Console.add_command("delete_dvd", _cmd_delete_dvd, ["amount"], 0, "Remove DVD square(s). Example: delete_dvd 32", ["1"])
 
 	Console.add_command_autocomplete_list("dvd_color", PackedStringArray([
 		"red", "green", "blue", "cyan", "magenta", "yellow", "white",

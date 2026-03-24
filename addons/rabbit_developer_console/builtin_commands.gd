@@ -18,6 +18,7 @@ func register_all() -> void:
 	console.add_command("help", help, ["command"], 0, "Displays instructions on how to use the console. Pass a command name for detailed help.")
 	console.add_command("commands_list", commands_list, 0, 0, "Lists all commands and their descriptions.")
 	console.add_command("commands", commands, 0, 0, "Lists commands with no descriptions.")
+	console.add_command("discord", discord, 0, 0, "Prints the link to the Rabbit Developer Console Discord server.")
 
 	# Output
 	console.add_command("echo", console.print_line, ["string"], 1, "Prints given string to the console.")
@@ -90,6 +91,9 @@ func delete_history() -> void:
 	DirAccess.remove_absolute("user://console_history.txt")
 
 
+func discord() -> void:
+	console.print_line("Join the Rabbit Developer Console Discord: [url=https://discord.gg/Y7caBf7gBj]https://discord.gg/Y7caBf7gBj[/url]")
+
 func help(command_name: String = "") -> void:
 	if not command_name.is_empty():
 		_show_command_help(command_name.to_lower().strip_edges().replace(" ", "_"))
@@ -101,6 +105,7 @@ func help(command_name: String = "") -> void:
   [color=#00ff00]commands[/color]         List available commands
   [color=#00ff00]commands_list[/color]    List commands with usage details
   [color=#00ff00]delete_history[/color]   Clear command history
+  [color=#00ff00]discord[/color]          Show the Discord server link
   [color=#00ff00]help[/color]             Show this help message
   [color=#00ff00]quit[/color] / [color=#00ff00]exit[/color]     Terminate the application
 
