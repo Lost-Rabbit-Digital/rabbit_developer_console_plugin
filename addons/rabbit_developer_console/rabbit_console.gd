@@ -7,7 +7,8 @@ var font_size := -1:
 	set(value):
 		font_size = value
 		_update_font_size()
-var is_fullscreen := true
+enum ConsolePosition { FULL, BOTTOM, TOP, LEFT, RIGHT }
+var console_position : ConsolePosition = ConsolePosition.BOTTOM
 var bg_transparency := 0.85
 
 var _panel_style : StyleBoxFlat
@@ -96,12 +97,12 @@ func _enter_tree() -> void:
 	var canvas_layer := CanvasLayer.new()
 	canvas_layer.layer = 3
 	add_child(canvas_layer)
-	control.anchor_bottom = 1.9 if is_fullscreen else 1.0
-	control.anchor_right = 1.0
 	canvas_layer.add_child(control)
+	_apply_position()
 	control.add_child(panel)
 	panel.anchor_right = 1.0
-	panel.anchor_bottom = 0.5
+	panel.anchor_bottom = 1.0
+	panel.offset_bottom = -30
 
 	# Terminal-style dark background for the panel
 	_panel_style = StyleBoxFlat.new()
@@ -127,9 +128,10 @@ func _enter_tree() -> void:
 		rich_label.add_theme_font_size_override("mono_font_size", font_size)
 	panel.add_child(rich_label)
 	_print_motd()
-	line_edit.anchor_top = 0.5
+	line_edit.anchor_top = 1.0
 	line_edit.anchor_right = 1.0
-	line_edit.anchor_bottom = 0.5
+	line_edit.anchor_bottom = 1.0
+	line_edit.offset_top = -30
 	line_edit.placeholder_text = "Type 'help' for a list of commands"
 
 	# Terminal-style input field
@@ -326,22 +328,46 @@ func reset_autocomplete() -> void:
 
 
 func toggle_size() -> void:
-	is_fullscreen = !is_fullscreen
-	_apply_size()
+	console_position = wrapi(console_position + 1, 0, ConsolePosition.size()) as ConsolePosition
+	_apply_position()
 
 
-func set_fullscreen() -> void:
-	is_fullscreen = true
-	_apply_size()
+func set_console_position(position : ConsolePosition) -> void:
+	console_position = position
+	_apply_position()
 
 
-func set_halfscreen() -> void:
-	is_fullscreen = false
-	_apply_size()
-
-
-func _apply_size() -> void:
-	control.anchor_bottom = 1.9 if is_fullscreen else 1.0
+func _apply_position() -> void:
+	match console_position:
+		ConsolePosition.FULL:
+			control.anchor_left = 0.0
+			control.anchor_top = 0.0
+			control.anchor_right = 1.0
+			control.anchor_bottom = 1.0
+		ConsolePosition.BOTTOM:
+			control.anchor_left = 0.0
+			control.anchor_top = 0.5
+			control.anchor_right = 1.0
+			control.anchor_bottom = 1.0
+		ConsolePosition.TOP:
+			control.anchor_left = 0.0
+			control.anchor_top = 0.0
+			control.anchor_right = 1.0
+			control.anchor_bottom = 0.5
+		ConsolePosition.LEFT:
+			control.anchor_left = 0.0
+			control.anchor_top = 0.0
+			control.anchor_right = 0.5
+			control.anchor_bottom = 1.0
+		ConsolePosition.RIGHT:
+			control.anchor_left = 0.5
+			control.anchor_top = 0.0
+			control.anchor_right = 1.0
+			control.anchor_bottom = 1.0
+	control.offset_left = 0
+	control.offset_top = 0
+	control.offset_right = 0
+	control.offset_bottom = 0
 
 
 func set_bg_transparency(value : float) -> void:
@@ -370,7 +396,7 @@ func toggle_console() -> void:
 	if (control.visible):
 		was_paused_already = get_tree().paused
 		get_tree().paused = was_paused_already || pause_enabled
-		_apply_size()
+		_apply_position()
 		line_edit.grab_focus()
 		console_opened.emit()
 	else:
