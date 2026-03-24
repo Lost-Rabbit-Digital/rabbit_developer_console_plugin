@@ -96,12 +96,23 @@ func _enter_tree() -> void:
 	control.add_child(panel)
 	panel.anchor_right = 1.0
 	panel.anchor_bottom = 0.5
+
+	# Terminal-style dark background for the panel
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.07, 0.07, 0.07, 0.95)
+	panel_style.border_color = Color(0.2, 0.2, 0.2, 1.0)
+	panel_style.set_border_width_all(1)
+	panel.add_theme_stylebox_override("panel", panel_style)
+
 	rich_label.selection_enabled = true
 	rich_label.context_menu_enabled = true
 	rich_label.bbcode_enabled = true
 	rich_label.scroll_following = true
 	rich_label.anchor_right = 1.0
 	rich_label.anchor_bottom = 1.0
+	rich_label.add_theme_color_override("default_color", Color(0.8, 0.8, 0.8, 1.0))
+	rich_label.add_theme_color_override("font_selected_color", Color(1.0, 1.0, 1.0, 1.0))
+	rich_label.add_theme_color_override("selection_color", Color(0.2, 0.4, 0.7, 0.5))
 	if font_size > 0:
 		rich_label.add_theme_font_size_override("normal_font_size", font_size)
 		rich_label.add_theme_font_size_override("bold_font_size", font_size)
@@ -109,11 +120,24 @@ func _enter_tree() -> void:
 		rich_label.add_theme_font_size_override("italics_font_size", font_size)
 		rich_label.add_theme_font_size_override("mono_font_size", font_size)
 	panel.add_child(rich_label)
-	rich_label.append_text("Development console.\n")
+	_print_motd()
 	line_edit.anchor_top = 0.5
 	line_edit.anchor_right = 1.0
 	line_edit.anchor_bottom = 0.5
-	line_edit.placeholder_text = "Enter \"help\" for instructions"
+	line_edit.placeholder_text = "Type 'help' for a list of commands"
+
+	# Terminal-style input field
+	var line_edit_style := StyleBoxFlat.new()
+	line_edit_style.bg_color = Color(0.05, 0.05, 0.05, 0.95)
+	line_edit_style.border_color = Color(0.2, 0.2, 0.2, 1.0)
+	line_edit_style.set_border_width_all(1)
+	line_edit_style.content_margin_left = 8
+	line_edit.add_theme_stylebox_override("normal", line_edit_style)
+	line_edit.add_theme_stylebox_override("focus", line_edit_style)
+	line_edit.add_theme_color_override("font_color", Color(0.0, 1.0, 0.0, 1.0))
+	line_edit.add_theme_color_override("font_placeholder_color", Color(0.4, 0.4, 0.4, 1.0))
+	line_edit.add_theme_color_override("caret_color", Color(0.0, 1.0, 0.0, 1.0))
+
 	if font_size > 0:
 		line_edit.add_theme_font_size_override("font_size", font_size)
 	control.add_child(line_edit)
@@ -121,6 +145,23 @@ func _enter_tree() -> void:
 	line_edit.text_changed.connect(_on_line_edit_text_changed)
 	control.visible = false
 	process_mode = PROCESS_MODE_ALWAYS
+
+
+func _get_hostname() -> String:
+	return ProjectSettings.get_setting("application/config/name", "localhost")
+
+
+func _get_prompt() -> String:
+	return "[color=#00ff00]user@%s[/color][color=#cccccc]:[/color][color=#5c5cff]~[/color][color=#cccccc]$[/color]" % _get_hostname()
+
+
+func _print_motd() -> void:
+	var hostname := _get_hostname()
+	rich_label.append_text("[color=#00ff00]%s login: user[/color]\n" % hostname)
+	rich_label.append_text("[color=#cccccc]Welcome to %s console v%s[/color]\n" % [hostname, "1.4.0"])
+	rich_label.append_text("[color=#666666] * Documentation:  Type 'help' for built-in commands[/color]\n")
+	rich_label.append_text("[color=#666666] * Command list:   Type 'commands' or 'commands_list'[/color]\n")
+	rich_label.append_text("[color=#666666]Last login: %s on tty1[/color]\n\n" % Time.get_datetime_string_from_system())
 
 
 func _update_font_size():
@@ -338,19 +379,19 @@ func scroll_to_bottom() -> void:
 func print_error(text : Variant, print_godot := false) -> void:
 	if not text is String:
 		text = str(text)
-	print_line("	   [color=light_coral]ERROR:[/color] %s" % text, print_godot)
+	print_line("[color=#ff4444]-bash: error:[/color] %s" % text, print_godot)
 
 
 func print_info(text : Variant, print_godot := false) -> void:
 	if not text is String:
 		text = str(text)
-	print_line("	   [color=light_blue]INFO:[/color] %s" % text, print_godot)
+	print_line("[color=#5555ff][info][/color] %s" % text, print_godot)
 
 
 func print_warning(text : Variant, print_godot := false) -> void:
 	if not text is String:
 		text = str(text)
-	print_line("	   [color=gold]WARNING:[/color] %s" % text, print_godot)
+	print_line("[color=#ffff55]-bash: warning:[/color] %s" % text, print_godot)
 
 
 func print_line(text : Variant, print_godot := false) -> void:
@@ -411,7 +452,7 @@ func _on_text_entered(new_text : String) -> void:
 
 	if not new_text.strip_edges().is_empty():
 		add_input_history(new_text)
-		print_line("[i]> " + new_text + "[/i]")
+		print_line(_get_prompt() + " " + new_text)
 		var text_split := parse_line_input(new_text)
 		var text_command := text_split[0]
 
@@ -428,7 +469,7 @@ func _on_text_entered(new_text : String) -> void:
 				return
 
 			if (arguments.size() < console_command.required):
-				print_error("Too few arguments! Required < %d >" % console_command.required)
+				print_error("%s: missing operand. Required %d argument(s)" % [text_command, console_command.required])
 				return
 			elif (arguments.size() > console_command.arguments.size()):
 				arguments.resize(console_command.arguments.size())
@@ -440,7 +481,7 @@ func _on_text_entered(new_text : String) -> void:
 			console_command.function.callv(arguments)
 		else:
 			console_unknown_command.emit(text_command)
-			print_error("Command not found.")
+			print_error("%s: command not found" % text_command)
 
 
 func _on_line_edit_text_changed(new_text : String) -> void:
@@ -462,26 +503,29 @@ func delete_history() -> void:
 
 
 func help() -> void:
-	rich_label.append_text("	Built in commands:
-		[color=light_green]calc[/color]: Calculates a given expresion
-		[color=light_green]clear[/color]: Clears the registry view
-		[color=light_green]commands[/color]: Shows a reduced list of all the currently registered commands
-		[color=light_green]commands_list[/color]: Shows a detailed list of all the currently registered commands
-		[color=light_green]delete_history[/color]: Deletes the commands history
-		[color=light_green]echo[/color]: Prints a given string to the console
-		[color=light_green]echo_error[/color]: Prints a given string as an error to the console
-		[color=light_green]echo_info[/color]: Prints a given string as info to the console
-		[color=light_green]echo_warning[/color]: Prints a given string as warning to the console
-		[color=light_green]pause[/color]: Pauses node processing
-		[color=light_green]unpause[/color]: Unpauses node processing
-		[color=light_green]quit[/color]: Quits the game
-	Controls:
-		[color=light_blue]Up[/color] and [color=light_blue]Down[/color] arrow keys to navigate commands history
-		[color=light_blue]PageUp[/color] and [color=light_blue]PageDown[/color] to scroll registry
-		[[color=light_blue]Ctrl[/color] + [color=light_blue]~[/color]] to change console size between half screen and full screen
-		[[color=light_blue]Ctrl[/color] + [color=light_blue]Mouse Wheel[/color]] up/down to change console font size
-		[color=light_blue]~[/color] or [color=light_blue]Esc[/color] key to close the console
-		[color=light_blue]Tab[/color] key to autocomplete, [color=light_blue]Tab[/color] again to cycle between matching suggestions\n\n")
+	rich_label.append_text("[color=#ffff55]BUILT-IN COMMANDS[/color]
+  [color=#00ff00]calc[/color]             Evaluate a mathematical expression
+  [color=#00ff00]clear[/color]            Clear the terminal screen
+  [color=#00ff00]commands[/color]         List available commands
+  [color=#00ff00]commands_list[/color]    List commands with usage details
+  [color=#00ff00]delete_history[/color]   Clear command history
+  [color=#00ff00]echo[/color]             Print a string to stdout
+  [color=#00ff00]echo_error[/color]       Print a string to stderr
+  [color=#00ff00]echo_info[/color]        Print an info message
+  [color=#00ff00]echo_warning[/color]     Print a warning message
+  [color=#00ff00]exec[/color]             Execute commands from a script file
+  [color=#00ff00]pause[/color]            Pause node processing
+  [color=#00ff00]unpause[/color]          Resume node processing
+  [color=#00ff00]quit[/color] / [color=#00ff00]exit[/color]     Terminate the application
+
+[color=#ffff55]KEY BINDINGS[/color]
+  [color=#5555ff]Up/Down[/color]           Navigate command history
+  [color=#5555ff]PageUp/PageDown[/color]   Scroll output buffer
+  [color=#5555ff]Tab[/color]              Auto-complete; press again to cycle
+  [color=#5555ff]Ctrl+~[/color]           Toggle fullscreen/half-screen
+  [color=#5555ff]Ctrl+Scroll[/color]      Adjust font size
+  [color=#5555ff]~ / Esc[/color]          Close console
+")
 
 
 func calculate(command : String) -> void:
@@ -498,31 +542,35 @@ func calculate(command : String) -> void:
 
 
 func commands() -> void:
-	var commands := []
+	var cmds := []
 	for command in console_commands:
 		if (!console_commands[command].hidden):
-			commands.append(str(command))
-	commands.sort()
-	rich_label.append_text("	")
-	rich_label.append_text(str(commands) + "\n\n")
+			cmds.append(str(command))
+	cmds.sort()
+	var line := ""
+	for i in range(cmds.size()):
+		line += "[color=#00ff00]%s[/color]" % cmds[i]
+		if i < cmds.size() - 1:
+			line += "  "
+	rich_label.append_text(line + "\n")
 
 
 func commands_list() -> void:
-	var commands := []
+	var cmds := []
 	for command in console_commands:
 		if (!console_commands[command].hidden):
-			commands.append(str(command))
-	commands.sort()
+			cmds.append(str(command))
+	cmds.sort()
 
-	for command in commands:
+	for command in cmds:
 		var arguments_string := ""
 		var description : String = console_commands[command].description
 		for i in range(console_commands[command].arguments.size()):
 			if i < console_commands[command].required:
-				arguments_string += "  [color=cornflower_blue]<" + console_commands[command].arguments[i] + ">[/color]"
+				arguments_string += " [color=#5555ff]<" + console_commands[command].arguments[i] + ">[/color]"
 			else:
-				arguments_string += "  <" + console_commands[command].arguments[i] + ">"
-		rich_label.append_text("	[color=light_green]%s[/color][color=gray]%s[/color]:   %s\n" % [command, arguments_string, description])
+				arguments_string += " [color=#666666][" + console_commands[command].arguments[i] + "][/color]"
+		rich_label.append_text("  [color=#00ff00]%-18s[/color]%s  [color=#888888]%s[/color]\n" % [command, arguments_string, description])
 	rich_label.append_text("\n")
 
 
@@ -554,4 +602,4 @@ func exec(filename : String) -> void:
 		while (!script.eof_reached()):
 			_on_text_entered(script.get_line())
 	else:
-		print_error("File %s not found." % [path])
+		print_error("%s: No such file or directory" % [path])
