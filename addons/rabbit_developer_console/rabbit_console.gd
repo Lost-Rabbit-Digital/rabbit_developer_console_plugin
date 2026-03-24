@@ -699,7 +699,7 @@ func _on_text_entered(new_text : String) -> void:
 			print_error("%s: command not found" % first_token)
 			var suggestion := _find_similar_command("_".join(text_split))
 			if suggestion != "":
-				print_line("[color=#cccccc]-bash: did you mean '[meta=cmd://%s][color=#00ff00]%s[/color][/meta]'?[/color]" % [suggestion, suggestion.replace("_", " ")])
+				print_line("[color=#cccccc]-bash: did you mean '[url=cmd://%s][color=#00ff00]%s[/color][/url]'?[/color]" % [suggestion, suggestion.replace("_", " ")])
 
 
 func _on_line_edit_text_changed(new_text : String) -> void:
