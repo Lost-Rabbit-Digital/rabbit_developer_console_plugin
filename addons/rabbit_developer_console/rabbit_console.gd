@@ -41,7 +41,6 @@ var control := Control.new()
 var rich_label := RichTextLabel.new()
 var panel := Panel.new()
 var line_edit := LineEdit.new()
-var _hint_label := Label.new()
 
 var console_commands := {}
 var command_parameters := {}
@@ -164,19 +163,6 @@ func _enter_tree() -> void:
 		line_edit.add_theme_font_size_override("font_size", font_size)
 	control.add_child(line_edit)
 
-	# Ghost autocomplete hint label overlaid on the line edit
-	_hint_label.anchor_top = 0.5
-	_hint_label.anchor_right = 1.0
-	_hint_label.anchor_bottom = 0.5
-	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hint_label.add_theme_color_override("font_color", Color(0.0, 1.0, 0.0, 0.3))
-	_hint_label.clip_text = true
-	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	if font_size > 0:
-		_hint_label.add_theme_font_size_override("font_size", font_size)
-	control.add_child(_hint_label)
-
 	# Command hint dropdown
 	_dropdown_style = StyleBoxFlat.new()
 	_dropdown_style.bg_color = Color(0.07, 0.07, 0.07, 0.97)
@@ -235,7 +221,6 @@ func _print_motd() -> void:
 func _update_font_size():
 	if font_size > 0:
 		line_edit.add_theme_font_size_override("font_size", font_size)
-		_hint_label.add_theme_font_size_override("font_size", font_size)
 		rich_label.add_theme_font_size_override("normal_font_size", font_size)
 		rich_label.add_theme_font_size_override("bold_font_size", font_size)
 		rich_label.add_theme_font_size_override("bold_italics_font_size", font_size)
@@ -243,7 +228,6 @@ func _update_font_size():
 		rich_label.add_theme_font_size_override("mono_font_size", font_size)
 	else:
 		line_edit.remove_theme_font_size_override("font_size")
-		_hint_label.remove_theme_font_size_override("font_size")
 		rich_label.remove_theme_font_size_override("normal_font_size")
 		rich_label.remove_theme_font_size_override("bold_font_size")
 		rich_label.remove_theme_font_size_override("bold_italics_font_size")
@@ -326,12 +310,6 @@ func _input(event : InputEvent) -> void:
 				var tween := create_tween()
 				tween.tween_property(scroll, "value",  scroll.value + (scroll.page - scroll.page * 0.1), 0.1)
 				get_tree().get_root().set_input_as_handled()
-			if (event.get_physical_keycode_with_modifiers() == KEY_RIGHT):
-				if line_edit.caret_column == line_edit.text.length() and !_hint_label.text.is_empty():
-					line_edit.text = _hint_label.text
-					line_edit.caret_column = line_edit.text.length()
-					_hint_label.text = ""
-					get_tree().get_root().set_input_as_handled()
 			if (event.get_physical_keycode_with_modifiers() == KEY_TAB):
 				autocomplete()
 				get_tree().get_root().set_input_as_handled()
@@ -583,7 +561,6 @@ func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
 func _on_text_entered(new_text : String) -> void:
 	scroll_to_bottom()
 	reset_autocomplete()
-	_hint_label.text = ""
 	_dropdown_panel.visible = false
 	_dropdown_matches.clear()
 	_dropdown_selected = -1
@@ -638,7 +615,6 @@ func _on_text_entered(new_text : String) -> void:
 func _on_line_edit_text_changed(new_text : String) -> void:
 	reset_autocomplete()
 	_dropdown_selected = -1
-	_update_hint_text(new_text)
 	_update_dropdown(new_text)
 
 
@@ -749,74 +725,6 @@ func _on_dropdown_item_pressed(match_text : String) -> void:
 	_dropdown_matches.clear()
 	_dropdown_selected = -1
 	reset_autocomplete()
-	_hint_label.text = ""
-
-
-func _update_hint_text(text : String) -> void:
-	if text.is_empty():
-		_hint_label.text = ""
-		return
-	var hint := _get_best_hint(text)
-	if hint.is_empty():
-		_hint_label.text = ""
-	else:
-		# Use spaces to offset the hint to align after the typed text
-		var font : Font = line_edit.get_theme_font("font")
-		var fs : int = line_edit.get_theme_font_size("font_size") if line_edit.has_theme_font_size("font_size") else line_edit.get_theme_default_font_size()
-		var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		_hint_label.text = hint
-		# Position the hint label so the text aligns with the line edit text
-		var margin_left : float = _line_edit_style.content_margin_left if _line_edit_style else 8.0
-		_hint_label.offset_left = margin_left + text_width - font.get_string_size(hint.substr(0, text.length()), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-
-
-func _get_best_hint(text : String) -> String:
-	if text.is_empty():
-		return ""
-	var split := parse_line_input(text)
-	# Strip trailing empty token produced when text ends with a space
-	while split.size() > 0 and split[split.size() - 1] == "":
-		split.resize(split.size() - 1)
-	if split.is_empty():
-		return ""
-
-	var match_result := _match_command_from_tokens(split)
-	var matched_cmd : String = match_result[0]
-	var tokens_consumed : int = match_result[1]
-
-	if matched_cmd != "" and tokens_consumed < split.size():
-		# Command matched with remaining tokens — try parameter hint
-		var param_input := split[split.size() - 1]
-		var cmd_display := matched_cmd.replace("_", " ")
-		if command_parameters.has(matched_cmd) and !param_input.is_empty():
-			for param in command_parameters[matched_cmd]:
-				if param.begins_with(param_input):
-					return cmd_display + " " + param
-		return ""
-
-	if matched_cmd != "":
-		# Exact command typed with no parameters yet — only hint history
-		for i in range(console_history.size() - 1, -1, -1):
-			if console_history[i].begins_with(text) and console_history[i] != text:
-				return console_history[i]
-		return ""
-
-	# No full command match — try prefix match against command names with spaces
-	var text_normalized := "_".join(split)
-	var best := ""
-	for command in console_commands:
-		if console_commands[command].hidden:
-			continue
-		if command.begins_with(text_normalized):
-			if best.is_empty() or command.length() < best.length():
-				best = command
-	if best != "":
-		return best.replace("_", " ")
-	# Also check history for prefix match
-	for i in range(console_history.size() - 1, -1, -1):
-		if console_history[i].begins_with(text) and console_history[i] != text:
-			return console_history[i]
-	return ""
 
 
 func add_input_history(text : String) -> void:
