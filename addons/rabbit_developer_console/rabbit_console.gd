@@ -7,7 +7,7 @@ var font_size := -1:
 	set(value):
 		font_size = value
 		_update_font_size()
-enum ConsolePosition { FULL, BOTTOM, TOP, LEFT, RIGHT }
+enum ConsolePosition { FULL, BOTTOM, TOP, LEFT, RIGHT, UPPER_LEFT, UPPER_RIGHT, LOWER_LEFT, LOWER_RIGHT }
 var console_position : ConsolePosition = ConsolePosition.BOTTOM
 var bg_transparency := 0.85
 
@@ -431,6 +431,26 @@ func _apply_position() -> void:
 		ConsolePosition.RIGHT:
 			control.anchor_left = 0.5
 			control.anchor_top = 0.0
+			control.anchor_right = 1.0
+			control.anchor_bottom = 1.0
+		ConsolePosition.UPPER_LEFT:
+			control.anchor_left = 0.0
+			control.anchor_top = 0.0
+			control.anchor_right = 0.5
+			control.anchor_bottom = 0.5
+		ConsolePosition.UPPER_RIGHT:
+			control.anchor_left = 0.5
+			control.anchor_top = 0.0
+			control.anchor_right = 1.0
+			control.anchor_bottom = 0.5
+		ConsolePosition.LOWER_LEFT:
+			control.anchor_left = 0.0
+			control.anchor_top = 0.5
+			control.anchor_right = 0.5
+			control.anchor_bottom = 1.0
+		ConsolePosition.LOWER_RIGHT:
+			control.anchor_left = 0.5
+			control.anchor_top = 0.5
 			control.anchor_right = 1.0
 			control.anchor_bottom = 1.0
 	control.offset_left = 0

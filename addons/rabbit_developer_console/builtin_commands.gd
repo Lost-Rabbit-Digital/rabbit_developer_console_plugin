@@ -43,6 +43,10 @@ func register_all() -> void:
 	console.add_command("console_top", console_top, 0, 0, "Docks the console to the top half.")
 	console.add_command("console_left", console_left, 0, 0, "Docks the console to the left half.")
 	console.add_command("console_right", console_right, 0, 0, "Docks the console to the right half.")
+	console.add_command("console_upper_left", console_upper_left, 0, 0, "Docks the console to the upper left corner.")
+	console.add_command("console_upper_right", console_upper_right, 0, 0, "Docks the console to the upper right corner.")
+	console.add_command("console_lower_left", console_lower_left, 0, 0, "Docks the console to the lower left corner.")
+	console.add_command("console_lower_right", console_lower_right, 0, 0, "Docks the console to the lower right corner.")
 	console.add_command("transparency", transparency, ["level 0-100"], 1, "Sets console background transparency (0=opaque, 100=invisible).")
 
 	# Time
@@ -126,6 +130,10 @@ func help(command_name: String = "") -> void:
   [color=#00ff00]console_top[/color]      Dock console to top half
   [color=#00ff00]console_left[/color]     Dock console to left half
   [color=#00ff00]console_right[/color]    Dock console to right half
+  [color=#00ff00]console_upper_left[/color]  Dock console to upper left corner
+  [color=#00ff00]console_upper_right[/color] Dock console to upper right corner
+  [color=#00ff00]console_lower_left[/color]  Dock console to lower left corner
+  [color=#00ff00]console_lower_right[/color] Dock console to lower right corner
   [color=#00ff00]transparency[/color]     Set background transparency (0-100)
 
 [color=#888888]  Time[/color]
@@ -270,6 +278,26 @@ func console_left() -> void:
 func console_right() -> void:
 	console.set_console_position(console.ConsolePosition.RIGHT)
 	console.print_info("Console docked to right.")
+
+
+func console_upper_left() -> void:
+	console.set_console_position(console.ConsolePosition.UPPER_LEFT)
+	console.print_info("Console docked to upper left corner.")
+
+
+func console_upper_right() -> void:
+	console.set_console_position(console.ConsolePosition.UPPER_RIGHT)
+	console.print_info("Console docked to upper right corner.")
+
+
+func console_lower_left() -> void:
+	console.set_console_position(console.ConsolePosition.LOWER_LEFT)
+	console.print_info("Console docked to lower left corner.")
+
+
+func console_lower_right() -> void:
+	console.set_console_position(console.ConsolePosition.LOWER_RIGHT)
+	console.print_info("Console docked to lower right corner.")
 
 
 func transparency(level : String) -> void:
@@ -564,7 +592,9 @@ func _show_command_help(command_name: String) -> void:
 		"volume_up": "volume", "volume_down": "volume",
 		"echo_warning": "echo", "echo_info": "echo", "echo_error": "echo",
 		"console_bottom": "console_full", "console_top": "console_full",
-		"console_left": "console_full", "console_right": "console_full"}
+		"console_left": "console_full", "console_right": "console_full",
+		"console_upper_left": "console_full", "console_upper_right": "console_full",
+		"console_lower_left": "console_full", "console_lower_right": "console_full"}
 	var key := aliases.get(command_name, command_name)
 	if pages.has(key):
 		console.rich_label.append_text(pages[key])
@@ -795,16 +825,24 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]console top[/color]
   [color=#00ff00]console left[/color]
   [color=#00ff00]console right[/color]
+  [color=#00ff00]console upper_left[/color]
+  [color=#00ff00]console upper_right[/color]
+  [color=#00ff00]console lower_left[/color]
+  [color=#00ff00]console lower_right[/color]
 
 [color=#ffff55]DESCRIPTION[/color]
-  Repositions and resizes the console overlay to one of five preset
+  Repositions and resizes the console overlay to one of nine preset
   layouts. The change takes effect immediately.
 
-    [color=#00ff00]console full[/color]    Covers the entire game window
-    [color=#00ff00]console bottom[/color]  Occupies the bottom half
-    [color=#00ff00]console top[/color]     Occupies the top half
-    [color=#00ff00]console left[/color]    Occupies the left half
-    [color=#00ff00]console right[/color]   Occupies the right half
+    [color=#00ff00]console full[/color]         Covers the entire game window
+    [color=#00ff00]console bottom[/color]       Occupies the bottom half
+    [color=#00ff00]console top[/color]          Occupies the top half
+    [color=#00ff00]console left[/color]         Occupies the left half
+    [color=#00ff00]console right[/color]        Occupies the right half
+    [color=#00ff00]console upper_left[/color]   Occupies the upper left corner
+    [color=#00ff00]console upper_right[/color]  Occupies the upper right corner
+    [color=#00ff00]console lower_left[/color]   Occupies the lower left corner
+    [color=#00ff00]console lower_right[/color]  Occupies the lower right corner
 
   The position can also be cycled at runtime with [color=#5555ff]Ctrl+~[/color].
 
@@ -814,6 +852,10 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]console top[/color]
   [color=#00ff00]console left[/color]
   [color=#00ff00]console right[/color]
+  [color=#00ff00]console upper_left[/color]
+  [color=#00ff00]console upper_right[/color]
+  [color=#00ff00]console lower_left[/color]
+  [color=#00ff00]console lower_right[/color]
 
 [color=#ffff55]SEE ALSO[/color]
   [color=#00ff00]transparency[/color]
