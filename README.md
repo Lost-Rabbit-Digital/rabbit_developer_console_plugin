@@ -10,6 +10,16 @@ A Godot 4 in-game developer console with a Linux terminal theme. Press <kbd>~</k
 
 ---
 
+## Screenshots
+
+![Main console view](screenshot_1.png)
+
+![Help menu](screenshot_2.png)
+
+![Example game with console](screenshot_3.png)
+
+---
+
 ## Features
 
 - **Terminal-style UI** — dark background, green text, bash-like prompt
