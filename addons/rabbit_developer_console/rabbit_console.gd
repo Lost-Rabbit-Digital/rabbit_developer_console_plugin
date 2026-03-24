@@ -128,11 +128,14 @@ func _enter_tree() -> void:
 	rich_label.context_menu_enabled = true
 	rich_label.bbcode_enabled = true
 	rich_label.scroll_following = true
+	rich_label.meta_underlined = true
 	rich_label.anchor_right = 1.0
 	rich_label.anchor_bottom = 1.0
 	rich_label.add_theme_color_override("default_color", Color(0.8, 0.8, 0.8, 1.0))
 	rich_label.add_theme_color_override("font_selected_color", Color(1.0, 1.0, 1.0, 1.0))
 	rich_label.add_theme_color_override("selection_color", Color(0.2, 0.4, 0.7, 0.5))
+	rich_label.add_theme_color_override("font_color_link", Color(0.33, 0.67, 1.0, 1.0))
+	rich_label.meta_clicked.connect(_on_console_link_clicked)
 	if font_size > 0:
 		rich_label.add_theme_font_size_override("normal_font_size", font_size)
 		rich_label.add_theme_font_size_override("bold_font_size", font_size)
@@ -192,6 +195,10 @@ func _enter_tree() -> void:
 	line_edit.text_changed.connect(_on_line_edit_text_changed)
 	control.visible = false
 	process_mode = PROCESS_MODE_ALWAYS
+
+
+func _on_console_link_clicked(meta : Variant) -> void:
+	OS.shell_open(str(meta))
 
 
 func _get_hostname() -> String:
