@@ -37,8 +37,8 @@ func _ready() -> void:
 	Console.add_command("dvd_size", _cmd_size, ["size"], 1, "Set ALL DVD square sizes in pixels. Example: dvd_size 120")
 	Console.add_command("dvd_color", _cmd_color, ["color"], 1, "Set ALL DVD square colors by name (red, green, blue, etc). Example: dvd_color cyan")
 	Console.add_command("dvd_angle", _cmd_angle, ["degrees"], 1, "Set ALL DVD square bounce angles in degrees. Example: dvd_angle 60")
-	Console.add_command("create_dvd", _cmd_create_dvd, [], 0, "Spawn a new DVD square to bounce around the screen.")
-	Console.add_command("delete_dvd", _cmd_delete_dvd, [], 0, "Remove one DVD square from the screen.")
+	Console.add_command("create_dvd", _cmd_create_dvd, ["amount"], 0, "Spawn DVD square(s). Example: create_dvd 32")
+	Console.add_command("delete_dvd", _cmd_delete_dvd, ["amount"], 0, "Remove DVD square(s). Example: delete_dvd 32")
 
 	Console.add_command_autocomplete_list("dvd_color", PackedStringArray([
 		"red", "green", "blue", "cyan", "magenta", "yellow", "white",
@@ -145,17 +145,27 @@ func _cmd_angle(value: String) -> void:
 	Console.print_line("All DVD angles set to %s degrees" % a)
 
 
-func _cmd_create_dvd() -> void:
-	dvds.append(_create_dvd_data())
-	Console.print_line("Created DVD. Total: %s" % dvds.size())
+func _cmd_create_dvd(amount: String = "1") -> void:
+	var count := int(amount)
+	if count <= 0:
+		Console.print_error("Amount must be a positive number.")
+		return
+	for i in count:
+		dvds.append(_create_dvd_data())
+	Console.print_line("Created %s DVD(s). Total: %s" % [count, dvds.size()])
 
 
-func _cmd_delete_dvd() -> void:
+func _cmd_delete_dvd(amount: String = "1") -> void:
 	if dvds.is_empty():
 		Console.print_error("No DVDs to remove.")
 		return
-	dvds.pop_back()
-	Console.print_line("Removed one DVD. Remaining: %s" % dvds.size())
+	var count := mini(int(amount), dvds.size())
+	if count <= 0:
+		Console.print_error("Amount must be a positive number.")
+		return
+	for i in count:
+		dvds.pop_back()
+	Console.print_line("Removed %s DVD(s). Remaining: %s" % [count, dvds.size()])
 
 
 func _on_quit_button_pressed() -> void:
