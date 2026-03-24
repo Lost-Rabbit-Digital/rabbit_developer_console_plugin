@@ -182,6 +182,26 @@ func help(command_name: String = "") -> void:
   [color=#5555ff]~ / Esc[/color]          Close console
 ")
 
+	# Game-specific commands (registered outside built-in commands)
+	var game_cmds := []
+	for command in console.console_commands:
+		if command not in console._builtin_command_names and not console.console_commands[command].hidden:
+			game_cmds.append(command)
+	game_cmds.sort()
+
+	if game_cmds.size() > 0:
+		console.rich_label.append_text("\n[color=#ffff55]GAME COMMANDS[/color]\n")
+		for command in game_cmds:
+			var cmd = console.console_commands[command]
+			var display: String = command.replace("_", " ")
+			var args_str := ""
+			for i in range(cmd.arguments.size()):
+				if i < cmd.required:
+					args_str += " [color=#5555ff]<%s>[/color]" % cmd.arguments[i]
+				else:
+					args_str += " [color=#666666][%s][/color]" % cmd.arguments[i]
+			console.rich_label.append_text("  [url=cmd://%s][color=#00ff00]%-18s[/color][/url]%s  [color=#888888]%s[/color]\n" % [command, display, args_str, cmd.description])
+
 
 func commands() -> void:
 	var cmds := []
