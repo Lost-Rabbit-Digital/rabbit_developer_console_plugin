@@ -27,4 +27,23 @@ grow_horizontal = 2
 grow_vertical = 2
 text = "Quit to desktop"
 
+[node name="CommandsPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = -10.0
+grow_vertical = 0
+
+[node name="CommandsLabel" type="Label" parent="CommandsPanel"]
+layout_mode = 2
+text = "Console Commands (~):
+  dvd_speed <speed>  - Set square speed
+  dvd_size <size>    - Set square size
+  dvd_color <color>  - Set square color
+  dvd_angle <degrees> - Set bounce angle"
+
 [connection signal="pressed" from="QuitButton" to="." method="_on_quit_button_pressed"]
