@@ -161,7 +161,7 @@ func commands() -> void:
 	var cmds := []
 	for command in console.console_commands:
 		if (!console.console_commands[command].hidden):
-			cmds.append(str(command))
+			cmds.append(command.replace("_", " "))
 	cmds.sort()
 	var line := ""
 	for i in range(cmds.size()):
@@ -179,6 +179,7 @@ func commands_list() -> void:
 	cmds.sort()
 
 	for command in cmds:
+		var command_display := command.replace("_", " ")
 		var arguments_string := ""
 		var description : String = console.console_commands[command].description
 		for i in range(console.console_commands[command].arguments.size()):
@@ -186,7 +187,7 @@ func commands_list() -> void:
 				arguments_string += " [color=#5555ff]<" + console.console_commands[command].arguments[i] + ">[/color]"
 			else:
 				arguments_string += " [color=#666666][" + console.console_commands[command].arguments[i] + "][/color]"
-		console.rich_label.append_text("  [color=#00ff00]%-18s[/color]%s  [color=#888888]%s[/color]\n" % [command, arguments_string, description])
+		console.rich_label.append_text("  [color=#00ff00]%-18s[/color]%s  [color=#888888]%s[/color]\n" % [command_display, arguments_string, description])
 	console.rich_label.append_text("\n")
 
 
