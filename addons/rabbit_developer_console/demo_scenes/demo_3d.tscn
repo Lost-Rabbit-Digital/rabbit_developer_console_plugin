@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/rabbit_developer_console/demo_scenes/demo_3d.gd" id="1_demo3d"]
+
+[node name="Demo3D" type="Node3D"]
+script = ExtResource("1_demo3d")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.906308, 0.422618, 0, -0.422618, 0.906308, 0, 8, 16)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 5, 5)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_env")
+
+[sub_resource type="Environment" id="Environment_env"]
+background_mode = 1
+background_color = Color(0.1, 0.1, 0.15, 1)
+ambient_light_color = Color(0.3, 0.3, 0.3, 1)
+ambient_light_energy = 0.5
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="QuitButton" type="Button" parent="CanvasLayer"]
+custom_minimum_size = Vector2(256, 128)
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -272.0
+offset_top = -144.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Quit to desktop"
+
+[node name="CommandsPanel" type="PanelContainer" parent="CanvasLayer"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = -10.0
+grow_vertical = 0
+
+[node name="CommandsLabel" type="Label" parent="CanvasLayer/CommandsPanel"]
+layout_mode = 2
+text = "Console Commands (~):
+  create_dvd          - Spawn a new DVD cube
+  delete_dvd          - Remove one DVD cube
+  dvd_speed <speed>   - Set all DVD speeds
+  dvd_size <size>     - Set all DVD sizes
+  dvd_color <color>   - Set all DVD colors
+  dvd_angle <degrees> - Set all DVD angles"
+
+[connection signal="pressed" from="CanvasLayer/QuitButton" to="." method="_on_quit_button_pressed"]
