@@ -555,6 +555,7 @@ func parse_line_input(text : String) -> PackedStringArray:
 
 # Returns [command_name, num_tokens_consumed] for the longest matching command
 # formed by joining tokens with underscores. Returns ["", 0] if no match found.
+# Supports shorthands: "ls" is treated as "list" when no direct match exists.
 func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
 	var best_match := ""
 	var best_count := 0
@@ -563,6 +564,16 @@ func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
 		if console_commands.has(candidate):
 			best_match = candidate
 			best_count = i
+	if best_match.is_empty() and not tokens.is_empty():
+		var shorthands := {"ls": "list"}
+		if shorthands.has(tokens[0]):
+			var expanded := tokens.duplicate()
+			expanded[0] = shorthands[tokens[0]]
+			for i in range(1, expanded.size() + 1):
+				var candidate := "_".join(expanded.slice(0, i))
+				if console_commands.has(candidate):
+					best_match = candidate
+					best_count = i
 	return [best_match, best_count]
 
 
