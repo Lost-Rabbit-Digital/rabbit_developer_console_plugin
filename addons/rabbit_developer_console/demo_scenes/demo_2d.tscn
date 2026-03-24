@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://kdoodofub67l"]
 
-[ext_resource type="Script" uid="uid://x1swmh6xvh5c" path="res://main.gd" id="1_ig7tw"]
+[ext_resource type="Script" path="res://addons/rabbit_developer_console/demo_scenes/demo_2d.gd" id="1_ig7tw"]
 
-[node name="Main" type="Control"]
+[node name="Demo2D" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
