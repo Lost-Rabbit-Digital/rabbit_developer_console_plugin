@@ -48,6 +48,14 @@ var console_history_index := 0
 var was_paused_already := false
 var _builtin_commands : RefCounted
 
+var _dropdown_panel := Panel.new()
+var _dropdown_vbox := VBoxContainer.new()
+var _dropdown_style : StyleBoxFlat
+var _dropdown_matches : Array[String] = []
+var _dropdown_selected := -1
+const _MAX_DROPDOWN_ITEMS := 12
+const _DROPDOWN_ITEM_HEIGHT := 24
+
 ## Usage: Console.add_command("command_name", <function to call>, <number of arguments or array of argument names>, <required number of arguments>, "Help description")
 func add_command(command_name : String, function : Callable, arguments = [], required: int = 0, description : String = "") -> void:
 	if (arguments is int):
@@ -164,6 +172,31 @@ func _enter_tree() -> void:
 		_hint_label.add_theme_font_size_override("font_size", font_size)
 	control.add_child(_hint_label)
 
+	# Command hint dropdown
+	_dropdown_style = StyleBoxFlat.new()
+	_dropdown_style.bg_color = Color(0.07, 0.07, 0.07, 0.97)
+	_dropdown_style.border_color = Color(0.0, 0.8, 0.0, 0.6)
+	_dropdown_style.set_border_width_all(1)
+	_dropdown_style.content_margin_left = 2
+	_dropdown_style.content_margin_right = 2
+	_dropdown_style.content_margin_top = 2
+	_dropdown_style.content_margin_bottom = 2
+	_dropdown_panel.add_theme_stylebox_override("panel", _dropdown_style)
+	_dropdown_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dropdown_panel.visible = false
+	_dropdown_panel.anchor_left = 0.0
+	_dropdown_panel.anchor_top = 1.0
+	_dropdown_panel.anchor_right = 0.0
+	_dropdown_panel.anchor_bottom = 1.0
+	_dropdown_panel.offset_left = 0
+	_dropdown_panel.offset_right = 300
+	_dropdown_panel.offset_bottom = -30
+
+	_dropdown_vbox.anchor_right = 1.0
+	_dropdown_vbox.anchor_bottom = 1.0
+	_dropdown_panel.add_child(_dropdown_vbox)
+	control.add_child(_dropdown_panel)
+
 	line_edit.text_submitted.connect(_on_text_entered)
 	line_edit.text_changed.connect(_on_line_edit_text_changed)
 	control.visible = false
@@ -252,7 +285,12 @@ func _input(event : InputEvent) -> void:
 		if (control.visible and event.pressed):
 			if (event.get_physical_keycode_with_modifiers() == KEY_UP):
 				get_tree().get_root().set_input_as_handled()
-				if (console_history_index > 0):
+				if _dropdown_panel.visible and _dropdown_matches.size() > 0:
+					_dropdown_selected = wrapi(_dropdown_selected - 1, 0, mini(_dropdown_matches.size(), _MAX_DROPDOWN_ITEMS))
+					_highlight_dropdown_item(_dropdown_selected)
+					line_edit.text = _dropdown_matches[_dropdown_selected]
+					line_edit.caret_column = line_edit.text.length()
+				elif (console_history_index > 0):
 					console_history_index -= 1
 					if (console_history_index >= 0):
 						line_edit.text = console_history[console_history_index]
@@ -260,7 +298,12 @@ func _input(event : InputEvent) -> void:
 						reset_autocomplete()
 			if (event.get_physical_keycode_with_modifiers() == KEY_DOWN):
 				get_tree().get_root().set_input_as_handled()
-				if (console_history_index < console_history.size()):
+				if _dropdown_panel.visible and _dropdown_matches.size() > 0:
+					_dropdown_selected = wrapi(_dropdown_selected + 1, 0, mini(_dropdown_matches.size(), _MAX_DROPDOWN_ITEMS))
+					_highlight_dropdown_item(_dropdown_selected)
+					line_edit.text = _dropdown_matches[_dropdown_selected]
+					line_edit.caret_column = line_edit.text.length()
+				elif (console_history_index < console_history.size()):
 					console_history_index += 1
 					if (console_history_index < console_history.size()):
 						line_edit.text = console_history[console_history_index]
@@ -433,6 +476,7 @@ func toggle_console() -> void:
 	else:
 		scroll_to_bottom()
 		reset_autocomplete()
+		_dropdown_panel.visible = false
 		if (pause_enabled && !was_paused_already):
 			get_tree().paused = false
 		console_closed.emit()
@@ -518,6 +562,9 @@ func _on_text_entered(new_text : String) -> void:
 	scroll_to_bottom()
 	reset_autocomplete()
 	_hint_label.text = ""
+	_dropdown_panel.visible = false
+	_dropdown_matches.clear()
+	_dropdown_selected = -1
 	line_edit.clear()
 	if (line_edit.has_method(&"edit")):
 		line_edit.call_deferred(&"edit")
@@ -561,8 +608,119 @@ func _on_text_entered(new_text : String) -> void:
 
 func _on_line_edit_text_changed(new_text : String) -> void:
 	reset_autocomplete()
+	_dropdown_selected = -1
 	_update_hint_text(new_text)
+	_update_dropdown(new_text)
 
+
+
+func _get_dropdown_matches(text : String) -> Array[String]:
+	var matches : Array[String] = []
+	if " " in text:
+		var split := parse_line_input(text)
+		if split.size() >= 1:
+			var command := split[0]
+			var param_input := split[split.size() - 1] if split.size() >= 2 else ""
+			if command_parameters.has(command):
+				for param in command_parameters[command]:
+					if param_input.is_empty() or param.begins_with(param_input) or param.contains(param_input):
+						matches.append(command + " " + param)
+	else:
+		var prefix_matches : Array[String] = []
+		var contains_matches : Array[String] = []
+		var sorted_names : Array[String] = []
+		for cmd_name in console_commands:
+			if not console_commands[cmd_name].hidden:
+				sorted_names.append(cmd_name)
+		sorted_names.sort()
+		for cmd_name in sorted_names:
+			if cmd_name.begins_with(text):
+				prefix_matches.append(cmd_name)
+			elif cmd_name.contains(text):
+				contains_matches.append(cmd_name)
+		matches.assign(prefix_matches + contains_matches)
+	return matches
+
+
+func _update_dropdown(text : String) -> void:
+	for child in _dropdown_vbox.get_children():
+		child.queue_free()
+	_dropdown_matches.clear()
+
+	if text.is_empty():
+		_dropdown_panel.visible = false
+		return
+
+	_dropdown_matches = _get_dropdown_matches(text)
+
+	if _dropdown_matches.is_empty():
+		_dropdown_panel.visible = false
+		return
+
+	var item_fs : int = font_size if font_size > 0 else 14
+	var item_height : int = maxi(_DROPDOWN_ITEM_HEIGHT, item_fs + 8)
+	var display_count := mini(_dropdown_matches.size(), _MAX_DROPDOWN_ITEMS)
+
+	for i in range(display_count):
+		var match_text : String = _dropdown_matches[i]
+		var btn := Button.new()
+		btn.text = match_text
+		btn.flat = true
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		btn.custom_minimum_size = Vector2(0, item_height)
+		btn.add_theme_color_override("font_color", Color(0.0, 1.0, 0.0, 1.0))
+		btn.add_theme_color_override("font_hover_color", Color(0.4, 1.0, 0.4, 1.0))
+		btn.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 1.0, 1.0))
+		var hover_style := StyleBoxFlat.new()
+		hover_style.bg_color = Color(0.1, 0.2, 0.1, 1.0)
+		hover_style.content_margin_left = 6
+		btn.add_theme_stylebox_override("hover", hover_style)
+		var normal_style := StyleBoxFlat.new()
+		normal_style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+		normal_style.content_margin_left = 6
+		btn.add_theme_stylebox_override("normal", normal_style)
+		btn.add_theme_stylebox_override("pressed", hover_style)
+		btn.add_theme_stylebox_override("focus", normal_style)
+		if font_size > 0:
+			btn.add_theme_font_size_override("font_size", font_size)
+		btn.pressed.connect(_on_dropdown_item_pressed.bind(match_text))
+		_dropdown_vbox.add_child(btn)
+
+	var panel_height := display_count * item_height + 4
+	_dropdown_panel.offset_top = -30 - panel_height
+	_dropdown_panel.offset_right = 300
+	_dropdown_panel.visible = true
+
+
+func _highlight_dropdown_item(index : int) -> void:
+	var children := _dropdown_vbox.get_children()
+	for i in range(children.size()):
+		var btn := children[i] as Button
+		if btn == null:
+			continue
+		if i == index:
+			var sel_style := StyleBoxFlat.new()
+			sel_style.bg_color = Color(0.1, 0.3, 0.1, 1.0)
+			sel_style.content_margin_left = 6
+			btn.add_theme_stylebox_override("normal", sel_style)
+		else:
+			var normal_style := StyleBoxFlat.new()
+			normal_style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+			normal_style.content_margin_left = 6
+			btn.add_theme_stylebox_override("normal", normal_style)
+
+
+func _on_dropdown_item_pressed(match_text : String) -> void:
+	line_edit.text = match_text + " "
+	line_edit.caret_column = line_edit.text.length()
+	line_edit.grab_focus()
+	_dropdown_panel.visible = false
+	_dropdown_matches.clear()
+	_dropdown_selected = -1
+	reset_autocomplete()
+	_hint_label.text = ""
 
 
 func _update_hint_text(text : String) -> void:
