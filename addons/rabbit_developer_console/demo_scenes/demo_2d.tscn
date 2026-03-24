@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://kdoodofub67l"]
 
-[ext_resource type="Script" path="res://addons/rabbit_developer_console/demo_scenes/demo_2d.gd" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://ftqxybwvtokw" path="res://addons/rabbit_developer_console/demo_scenes/demo_2d.gd" id="1_ig7tw"]
 
 [node name="Demo2D" type="Control"]
 layout_mode = 3
