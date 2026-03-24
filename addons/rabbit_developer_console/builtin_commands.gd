@@ -64,6 +64,7 @@ func register_all() -> void:
 	# Scene tree / Node inspection
 	console.add_command("print_tree", print_tree_cmd, 0, 0, "Prints the current scene tree.")
 	console.add_command("print_node", print_node, ["node_path"], 1, "Prints details about a node at the given path.")
+	console.add_command("list", list_resources, 0, 0, "Lists all loadable scenes in the project (alias: ls).")
 	console.add_command("list_scenes", list_scenes, 0, 0, "Lists all .tscn files in the project.")
 	console.add_command("load_scene", load_scene, ["scene_path"], 1, "Changes to the given scene (res:// path or name).")
 	console.add_command("list_autoloads", list_autoloads, 0, 0, "Lists all autoload singletons.")
@@ -149,6 +150,7 @@ func help(command_name: String = "") -> void:
   [url=cmd://pause][color=#00ff00]pause[/color][/url] / [url=cmd://pause][color=#00ff00]unpause[/color][/url]  Toggle node processing
   [url=cmd://restart][color=#00ff00]restart[/color][/url] / [url=cmd://restart][color=#00ff00]reload[/color][/url] Restart the current scene
   [url=cmd://load_scene][color=#00ff00]load scene[/color][/url]       Change to a scene by path or name
+  [url=cmd://list][color=#00ff00]list[/color][/url] / [url=cmd://list][color=#00ff00]ls[/color][/url]       List all loadable scenes (cd targets)
   [url=cmd://list_scenes][color=#00ff00]list scenes[/color][/url]      List all .tscn files in the project
   [url=cmd://scene_info][color=#00ff00]scene info[/color][/url]       Info about the current scene
 
@@ -536,6 +538,16 @@ func print_node(node_path : String) -> void:
 			console.print_line("  [color=#ffff55]Script vars:[/color]")
 			for line in script_props:
 				console.print_line(line)
+
+
+func list_resources() -> void:
+	var scenes := _find_files_recursive("res://", ".tscn")
+	if scenes.is_empty():
+		console.print_warning("No loadable scenes found.")
+		return
+	console.print_line("[color=#ffff55]LOADABLE SCENES (%d)[/color]  [color=#888888]use 'cd <scene>' to navigate[/color]" % scenes.size())
+	for scene in scenes:
+		console.print_line("  %s" % scene)
 
 
 func list_scenes() -> void:
@@ -1011,6 +1023,23 @@ func _build_help_pages() -> Dictionary:
 
 [color=#ffff55]SEE ALSO[/color]
   [color=#00ff00]list scenes[/color]  [color=#00ff00]restart[/color]  [color=#00ff00]scene info[/color]
+
+""",
+# -------
+"list": """[color=#ffff55]LIST[/color]                                         [color=#888888]scene[/color]
+
+  [color=#00ff00]list[/color]
+
+[color=#ffff55]DESCRIPTION[/color]
+  Lists all [color=#888888].tscn[/color] scenes in the project that you can navigate to
+  using [color=#00ff00]cd[/color] or [color=#00ff00]load scene[/color]. Shorthand: [color=#00ff00]ls[/color]
+
+[color=#ffff55]USAGE[/color]
+  [color=#00ff00]list[/color]
+  [color=#00ff00]ls[/color]
+
+[color=#ffff55]SEE ALSO[/color]
+  [color=#00ff00]load scene[/color]  [color=#00ff00]scene info[/color]  [color=#00ff00]list scenes[/color]
 
 """,
 # -------
