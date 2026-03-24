@@ -208,7 +208,7 @@ func _get_hostname() -> String:
 
 
 func _get_prompt() -> String:
-	return "[color=#00ff00]user@%s[/color][color=#cccccc]:[/color][color=#5c5cff]~[/color][color=#cccccc]$[/color]" % _get_hostname()
+	return "[color=#00ff00]user[/color][color=#cccccc]:[/color][color=#5c5cff]~[/color][color=#cccccc]$[/color]"
 
 
 func _get_plugin_version() -> String:
@@ -220,7 +220,6 @@ func _get_plugin_version() -> String:
 
 func _print_motd() -> void:
 	var hostname := _get_hostname()
-	rich_label.append_text("[color=#00ff00]%s login: user[/color]\n" % hostname)
 	var plugin_version := _get_plugin_version()
 	rich_label.append_text("[color=#cccccc]Welcome to %s console v%s[/color]\n" % [hostname, plugin_version])
 	rich_label.append_text("[color=#666666] * Documentation:  Type 'help' for built-in commands[/color]\n")
