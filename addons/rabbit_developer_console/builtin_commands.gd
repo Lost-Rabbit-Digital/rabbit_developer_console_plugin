@@ -109,65 +109,66 @@ func help(command_name: String = "") -> void:
 		_show_command_help(command_name.to_lower().strip_edges().replace(" ", "_"))
 		return
 	console.rich_label.append_text("[color=#ffff55]BUILT-IN COMMANDS[/color]\n[color=#888888]  Use [/color][color=#00ff00]help <command>[/color][color=#888888] for detailed help on any command.[/color]
+[color=#888888]  Click any command name to view its help page.[/color]
 
 [color=#888888]  General[/color]
-  [color=#00ff00]clear[/color]            Clear the terminal screen
-  [color=#00ff00]commands[/color]         List available commands
-  [color=#00ff00]commands_list[/color]    List commands with usage details
-  [color=#00ff00]delete_history[/color]   Clear command history
-  [color=#00ff00]discord[/color]          Show the Discord server link
-  [color=#00ff00]help[/color]             Show this help message
-  [color=#00ff00]quit[/color] / [color=#00ff00]exit[/color]     Terminate the application
+  [meta=cmd://clear][color=#00ff00]clear[/color][/meta]            Clear the terminal screen
+  [meta=cmd://commands][color=#00ff00]commands[/color][/meta]         List available commands
+  [meta=cmd://commands_list][color=#00ff00]commands list[/color][/meta]    List commands with usage details
+  [meta=cmd://delete_history][color=#00ff00]delete history[/color][/meta]   Clear command history
+  [meta=cmd://discord][color=#00ff00]discord[/color][/meta]          Show the Discord server link
+  [meta=cmd://help][color=#00ff00]help[/color][/meta]             Show this help message
+  [meta=cmd://quit][color=#00ff00]quit[/color][/meta] / [meta=cmd://quit][color=#00ff00]exit[/color][/meta]     Terminate the application
 
 [color=#888888]  Output[/color]
-  [color=#00ff00]echo[/color]             Print a string to stdout
-  [color=#00ff00]echo_error[/color]       Print a string to stderr
-  [color=#00ff00]echo_info[/color]        Print an info message
-  [color=#00ff00]echo_warning[/color]     Print a warning message
+  [meta=cmd://echo][color=#00ff00]echo[/color][/meta]             Print a string to stdout
+  [meta=cmd://echo_error][color=#00ff00]echo error[/color][/meta]       Print a string to stderr
+  [meta=cmd://echo_info][color=#00ff00]echo info[/color][/meta]        Print an info message
+  [meta=cmd://echo_warning][color=#00ff00]echo warning[/color][/meta]     Print a warning message
 
 [color=#888888]  Utility[/color]
-  [color=#00ff00]calc[/color]             Evaluate a mathematical expression
-  [color=#00ff00]exec[/color]             Execute commands from a script file
+  [meta=cmd://calc][color=#00ff00]calc[/color][/meta]             Evaluate a mathematical expression
+  [meta=cmd://exec][color=#00ff00]exec[/color][/meta]             Execute commands from a script file
 
 [color=#888888]  Display[/color]
-  [color=#00ff00]console_full[/color]     Set console to full window mode
-  [color=#00ff00]console_bottom[/color]   Dock console to bottom half
-  [color=#00ff00]console_top[/color]      Dock console to top half
-  [color=#00ff00]console_left[/color]     Dock console to left half
-  [color=#00ff00]console_right[/color]    Dock console to right half
-  [color=#00ff00]console_upper_left[/color]  Dock console to upper left corner
-  [color=#00ff00]console_upper_right[/color] Dock console to upper right corner
-  [color=#00ff00]console_lower_left[/color]  Dock console to lower left corner
-  [color=#00ff00]console_lower_right[/color] Dock console to lower right corner
-  [color=#00ff00]transparency[/color]     Set background transparency (0-100)
+  [meta=cmd://console_full][color=#00ff00]console full[/color][/meta]     Set console to full window mode
+  [meta=cmd://console_bottom][color=#00ff00]console bottom[/color][/meta]   Dock console to bottom half
+  [meta=cmd://console_top][color=#00ff00]console top[/color][/meta]      Dock console to top half
+  [meta=cmd://console_left][color=#00ff00]console left[/color][/meta]     Dock console to left half
+  [meta=cmd://console_right][color=#00ff00]console right[/color][/meta]    Dock console to right half
+  [meta=cmd://console_upper_left][color=#00ff00]console upper left[/color][/meta]  Dock console to upper left corner
+  [meta=cmd://console_upper_right][color=#00ff00]console upper right[/color][/meta] Dock console to upper right corner
+  [meta=cmd://console_lower_left][color=#00ff00]console lower left[/color][/meta]  Dock console to lower left corner
+  [meta=cmd://console_lower_right][color=#00ff00]console lower right[/color][/meta] Dock console to lower right corner
+  [meta=cmd://transparency][color=#00ff00]transparency[/color][/meta]     Set background transparency (0-100)
 
 [color=#888888]  Time[/color]
-  [color=#00ff00]timescale[/color]        Set Engine.time_scale (e.g. 0.5, 2.0)
+  [meta=cmd://timescale][color=#00ff00]timescale[/color][/meta]        Set Engine.time_scale (e.g. 0.5, 2.0)
 
 [color=#888888]  Scene[/color]
-  [color=#00ff00]pause[/color] / [color=#00ff00]unpause[/color]  Toggle node processing
-  [color=#00ff00]restart[/color] / [color=#00ff00]reload[/color] Restart the current scene
-  [color=#00ff00]load_scene[/color]       Change to a scene by path or name
-  [color=#00ff00]list_scenes[/color]      List all .tscn files in the project
-  [color=#00ff00]scene_info[/color]       Info about the current scene
+  [meta=cmd://pause][color=#00ff00]pause[/color][/meta] / [meta=cmd://pause][color=#00ff00]unpause[/color][/meta]  Toggle node processing
+  [meta=cmd://restart][color=#00ff00]restart[/color][/meta] / [meta=cmd://restart][color=#00ff00]reload[/color][/meta] Restart the current scene
+  [meta=cmd://load_scene][color=#00ff00]load scene[/color][/meta]       Change to a scene by path or name
+  [meta=cmd://list_scenes][color=#00ff00]list scenes[/color][/meta]      List all .tscn files in the project
+  [meta=cmd://scene_info][color=#00ff00]scene info[/color][/meta]       Info about the current scene
 
 [color=#888888]  Inspection[/color]
-  [color=#00ff00]print_tree[/color]       Print the current scene tree
-  [color=#00ff00]print_node[/color]       Print details about a node at a path
-  [color=#00ff00]list_autoloads[/color]   List all autoload singletons
-  [color=#00ff00]engine_info[/color]      Godot version, renderer, adapter info
+  [meta=cmd://print_tree][color=#00ff00]print tree[/color][/meta]       Print the current scene tree
+  [meta=cmd://print_node][color=#00ff00]print node[/color][/meta]       Print details about a node at a path
+  [meta=cmd://list_autoloads][color=#00ff00]list autoloads[/color][/meta]   List all autoload singletons
+  [meta=cmd://engine_info][color=#00ff00]engine info[/color][/meta]      Godot version, renderer, adapter info
 
 [color=#888888]  Performance[/color]
-  [color=#00ff00]fps[/color]              Show FPS and frame time
-  [color=#00ff00]mem[/color]              Show memory usage
-  [color=#00ff00]vsync[/color]            Get or set VSync mode
-  [color=#00ff00]physics_toggle[/color]   Toggle physics processing on/off
+  [meta=cmd://fps][color=#00ff00]fps[/color][/meta]              Show FPS and frame time
+  [meta=cmd://mem][color=#00ff00]mem[/color][/meta]              Show memory usage
+  [meta=cmd://vsync][color=#00ff00]vsync[/color][/meta]            Get or set VSync mode
+  [meta=cmd://physics_toggle][color=#00ff00]physics toggle[/color][/meta]   Toggle physics processing on/off
 
 [color=#888888]  Audio[/color]
-  [color=#00ff00]mute[/color] / [color=#00ff00]unmute[/color]   Toggle game audio
-  [color=#00ff00]volume[/color]           Set master volume (0.0-1.0)
-  [color=#00ff00]volume_up[/color] / [color=#00ff00]down[/color] Adjust volume by 10%%
-  [color=#00ff00]list_buses[/color]       List all audio buses
+  [meta=cmd://mute][color=#00ff00]mute[/color][/meta] / [meta=cmd://mute][color=#00ff00]unmute[/color][/meta]   Toggle game audio
+  [meta=cmd://volume][color=#00ff00]volume[/color][/meta]           Set master volume (0.0-1.0)
+  [meta=cmd://volume_up][color=#00ff00]volume up[/color][/meta] / [meta=cmd://volume_down][color=#00ff00]down[/color][/meta] Adjust volume by 10%%
+  [meta=cmd://list_buses][color=#00ff00]list buses[/color][/meta]       List all audio buses
 
 [color=#ffff55]KEY BINDINGS[/color]
   [color=#5555ff]Up/Down[/color]           Navigate command history
@@ -183,11 +184,11 @@ func commands() -> void:
 	var cmds := []
 	for command in console.console_commands:
 		if (!console.console_commands[command].hidden):
-			cmds.append(command.replace("_", " "))
+			cmds.append(command)
 	cmds.sort()
 	var line := ""
 	for i in range(cmds.size()):
-		line += "[color=#00ff00]%s[/color]" % cmds[i]
+		line += "[meta=cmd://%s][color=#00ff00]%s[/color][/meta]" % [cmds[i], cmds[i].replace("_", " ")]
 		if i < cmds.size() - 1:
 			line += "  "
 	console.rich_label.append_text(line + "\n")
@@ -209,7 +210,7 @@ func commands_list() -> void:
 				arguments_string += " [color=#5555ff]<" + console.console_commands[command].arguments[i] + ">[/color]"
 			else:
 				arguments_string += " [color=#666666][" + console.console_commands[command].arguments[i] + "][/color]"
-		console.rich_label.append_text("  [color=#00ff00]%-18s[/color]%s  [color=#888888]%s[/color]\n" % [command_display, arguments_string, description])
+		console.rich_label.append_text("  [meta=cmd://%s][color=#00ff00]%-18s[/color][/meta]%s  [color=#888888]%s[/color]\n" % [command, command_display, arguments_string, description])
 	console.rich_label.append_text("\n")
 
 
@@ -615,7 +616,7 @@ func _show_command_help(command_name: String) -> void:
 				args_str += " [color=#666666][%s][/color]" % cmd.arguments[i]
 		console.rich_label.append_text("[color=#ffff55]HELP: %s[/color]\n\n  [color=#00ff00]%s[/color]%s\n\n  %s\n\n" % [display, display, args_str, cmd.description])
 	else:
-		console.print_error("help: no entry for '%s'. Try [color=#00ff00]commands[/color] to list all commands." % command_name.replace("_", " "))
+		console.print_error("help: no entry for '%s'. Try [meta=cmd://commands][color=#00ff00]commands[/color][/meta] to list all commands." % command_name.replace("_", " "))
 
 
 func _build_help_pages() -> Dictionary:

@@ -204,6 +204,10 @@ func _on_console_link_clicked(meta : Variant) -> void:
 	var meta_str := str(meta)
 	if meta_str.begins_with("node://"):
 		return
+	if meta_str.begins_with("cmd://"):
+		var command_name := meta_str.substr("cmd://".length())
+		_on_text_entered("help " + command_name.replace("_", " "))
+		return
 	OS.shell_open(meta_str)
 
 
@@ -214,6 +218,9 @@ const _HOVER_HIGHLIGHT_COLOR := Color(0.0, 1.0, 0.5, 1.0)
 
 func _on_meta_hover_started(meta : Variant) -> void:
 	var meta_str := str(meta)
+	if meta_str.begins_with("cmd://"):
+		rich_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		return
 	if not meta_str.begins_with("node://"):
 		return
 	var node_path := meta_str.substr("node://".length())
@@ -228,6 +235,7 @@ func _on_meta_hover_started(meta : Variant) -> void:
 
 
 func _on_meta_hover_ended(meta : Variant) -> void:
+	rich_label.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	if _hover_highlighted_node and is_instance_valid(_hover_highlighted_node):
 		_hover_highlighted_node.modulate = _hover_original_modulate
 	_hover_highlighted_node = null
@@ -691,7 +699,7 @@ func _on_text_entered(new_text : String) -> void:
 			print_error("%s: command not found" % first_token)
 			var suggestion := _find_similar_command("_".join(text_split))
 			if suggestion != "":
-				print_line("[color=#cccccc]-bash: did you mean '[color=#00ff00]%s[/color]'?[/color]" % suggestion.replace("_", " "))
+				print_line("[color=#cccccc]-bash: did you mean '[meta=cmd://%s][color=#00ff00]%s[/color][/meta]'?[/color]" % [suggestion, suggestion.replace("_", " ")])
 
 
 func _on_line_edit_text_changed(new_text : String) -> void:
