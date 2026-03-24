@@ -92,7 +92,7 @@ func delete_history() -> void:
 
 
 func discord() -> void:
-	console.print_line("Join the Rabbit Developer Console Discord: [color=#5555ff]https://discord.gg/Y7caBf7gBj[/color]")
+	console.print_line("Join the Rabbit Developer Console Discord: [url=https://discord.gg/Y7caBf7gBj]https://discord.gg/Y7caBf7gBj[/url]")
 
 
 func help() -> void:
