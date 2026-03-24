@@ -177,6 +177,7 @@ func _enter_tree() -> void:
 	_dropdown_style.content_margin_bottom = 2
 	_dropdown_panel.add_theme_stylebox_override("panel", _dropdown_style)
 	_dropdown_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dropdown_panel.clip_contents = true
 	_dropdown_panel.visible = false
 	_dropdown_panel.anchor_left = 0.0
 	_dropdown_panel.anchor_top = 1.0
@@ -671,7 +672,9 @@ func _update_dropdown(text : String) -> void:
 
 	var item_fs : int = font_size if font_size > 0 else 14
 	var item_height : int = maxi(_DROPDOWN_ITEM_HEIGHT, item_fs + 8)
-	var display_count := mini(_dropdown_matches.size(), _MAX_DROPDOWN_ITEMS)
+	var available_height : int = int(control.size.y) - 30
+	var max_items_fit : int = max(1, int((available_height - 4) / item_height))
+	var display_count := mini(_dropdown_matches.size(), mini(_MAX_DROPDOWN_ITEMS, max_items_fit))
 
 	for i in range(display_count):
 		var match_text : String = _dropdown_matches[i]
