@@ -208,7 +208,7 @@ func _get_hostname() -> String:
 
 
 func _get_prompt() -> String:
-	return "[color=#00ff00]user@%s[/color][color=#cccccc]:[/color][color=#5c5cff]~[/color][color=#cccccc]$[/color]" % _get_hostname()
+	return "[color=#00ff00]user[/color][color=#cccccc]:[/color][color=#5c5cff]~[/color][color=#cccccc]$[/color]"
 
 
 func _get_plugin_version() -> String:
