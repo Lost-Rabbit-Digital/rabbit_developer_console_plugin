@@ -1,97 +1,162 @@
-# Manage User Data
+# Rabbit Developer Console
 
-<img src="plugin_icon.png" width="64" height="64" alt="Manage User Data icon">
+<img src="plugin_icon.png" width="64" height="64" alt="Developer Console icon">
 
-A Godot 4 editor plugin for browsing and selectively deleting your project's `user://` directory without leaving the editor.
+A Godot 4 in-game developer console with a Linux terminal theme. Press <kbd>~</kbd> to open it during gameplay and execute commands.
 
-**Requires Godot 4.1+**
-
-[![Godot Asset Library](https://img.shields.io/badge/Godot%20Asset%20Library-Manage%20User%20Data-478CBF?style=for-the-badge&logo=godotengine&logoColor=white)](https://godotengine.org/asset-library/asset/4811)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Y7caBf7gBj)
-
-<img src="screenshot_1.png" width="512" height="512" alt="Manage User Data icon">
+**Requires Godot 4.3+**
 
 ---
 
-## Godot Asset Library
+## Features
 
-This plugin is available on the Godot Asset Library:
-[https://godotengine.org/asset-library/asset/4811](https://godotengine.org/asset-library/asset/4811)
-
-You can install it directly from within the Godot editor via the **AssetLib** tab, or download it from the link above.
+- **Terminal-style UI** — dark background, green text, bash-like prompt
+- **Built-in commands** — help, clear, calc, echo, pause/unpause, mute/unmute, volume control, scene restart, and more
+- **Custom commands** — register your own commands from any script
+- **Autocomplete** — press <kbd>Tab</kbd> to cycle through matching commands and parameters
+- **Command history** — <kbd>Up</kbd>/<kbd>Down</kbd> arrows to recall previous input, persisted across sessions
+- **Font scaling** — <kbd>Ctrl</kbd>+scroll wheel to resize text on the fly
+- **Fullscreen toggle** — <kbd>Ctrl</kbd>+<kbd>~</kbd> to expand the console
+- **Custom themes** — set a `.tres` theme via Project Settings (`console/theme`)
 
 ---
 
 ## Install
 
-### Asset Library (recommended)
-
-1. Open your project → **AssetLib** → search **"Manage User Data"**
-2. **Download** → **Install**
-3. **Project → Project Settings → Plugins** → enable **Manage User Data**
-
 ### Manual
 
-1. Copy `addons/manage_user_data/` into your project:
+1. Copy `addons/rabbit_developer_console/` into your project:
    ```
    your_project/
    └── addons/
-       └── manage_user_data/
+       └── rabbit_developer_console/
            ├── plugin.cfg
-           └── plugin.gd
+           ├── rabbit_console_plugin.gd
+           ├── rabbit_console.gd
+           └── builtin_commands.gd
    ```
-2. **Project → Project Settings → Plugins** → enable **Manage User Data**
+2. **Project → Project Settings → Plugins** → enable **Developer Console**
 
 ---
 
 ## Usage
 
-Click the **User Data** button in the editor toolbar to open the dialog.
+Press <kbd>~</kbd> (backtick/tilde) during gameplay to open the console.
 
-<img src="screenshot_4.png" width="512" height="512" alt="Manage User Data icon">
+### Key Bindings
 
-| Action | How |
+| Key | Action |
 |---|---|
-| Delete everything | Leave all items checked → **Delete Selected** |
-| Delete specific files | Uncheck **Select All** → tick what you want → **Delete Selected** |
-| Find a file | Type in the **Search** bar |
-| Filter by type | Use the **All Types** dropdown (Files, Folders, `.json`, `.cache`) |
-| Clear filters | Click **×** next to the dropdown |
-| Refresh the list | Click the **⟳** icon |
-| Open in file manager | Click **Open Folder** |
+| <kbd>~</kbd> | Toggle console |
+| <kbd>Esc</kbd> | Close console |
+| <kbd>Ctrl</kbd>+<kbd>~</kbd> | Toggle fullscreen console |
+| <kbd>Tab</kbd> | Autocomplete (press again to cycle) |
+| <kbd>Up</kbd> / <kbd>Down</kbd> | Navigate command history |
+| <kbd>PageUp</kbd> / <kbd>PageDown</kbd> | Scroll output |
+| <kbd>Ctrl</kbd>+Scroll | Adjust font size |
 
-<img src="screenshot_2.png" width="512" height="512" alt="Manage User Data icon">
+### Built-in Commands
 
-The status bar shows a live count and total size of selected items before you confirm. Deletion is permanent and cannot be undone.
-
-<img src="screenshot_5.png" width="512" height="256" alt="Manage User Data icon">
+| Command | Description |
+|---|---|
+| `help` | Show help and key bindings |
+| `commands` | List all available commands |
+| `commands_list` | List commands with usage details |
+| `clear` | Clear console output |
+| `echo <string>` | Print text to console |
+| `calc <expr>` | Evaluate a math expression |
+| `exec <filename>` | Run commands from a `user://<filename>.txt` script |
+| `pause` / `unpause` | Pause or resume the scene tree |
+| `restart` / `reload` | Restart the current scene |
+| `mute` / `unmute` | Toggle audio |
+| `volume <0.0-1.0>` | Set master volume |
+| `volume_up` / `volume_down` | Adjust volume by 10% |
+| `quit` / `exit` | Quit the game |
+| `delete_history` | Clear command history |
 
 ---
 
-## What's in user://
+## Adding Custom Commands
 
-Godot writes to `user://` when your game uses paths like `"user://save.json"`. Common files to clean during development:
+Register commands from any script that has access to the `Console` autoload:
 
-| Extension | Source |
-|---|---|
-| `.cfg` / `.json` | Save data |
-| `.log` | Log files |
-| `.cache` | Engine/game caches |
+```gdscript
+func _ready():
+    Console.add_command("greet", greet, ["name"], 1, "Greets someone by name.")
 
-**On-disk location:**
+func greet(player_name: String) -> void:
+    Console.print_line("Hello, %s!" % player_name)
+```
 
-| Platform | Path |
-|---|---|
-| Windows | `%APPDATA%\Godot\app_userdata\<project>\` |
-| macOS | `~/Library/Application Support/Godot/app_userdata/<project>/` |
-| Linux | `~/.local/share/godot/app_userdata/<project>/` |
+### API Reference
+
+```gdscript
+# Add a command (arguments can be an Array of names or an int for legacy support)
+Console.add_command(name: String, function: Callable, arguments = [], required: int = 0, description: String = "")
+
+# Add a hidden command (won't appear in help or autocomplete)
+Console.add_hidden_command(name: String, function: Callable, arguments = [], required: int = 0)
+
+# Remove a command (call in _exit_tree if the node may be freed)
+Console.remove_command(name: String)
+
+# Add autocomplete suggestions for a command's parameters
+Console.add_command_autocomplete_list(name: String, param_list: PackedStringArray)
+
+# Output helpers
+Console.print_line(text)
+Console.print_error(text)
+Console.print_warning(text)
+Console.print_info(text)
+
+# Console control
+Console.toggle_console()
+Console.enable()
+Console.disable()
+```
+
+### Signals
+
+```gdscript
+Console.console_opened       # Emitted when the console is shown
+Console.console_closed       # Emitted when the console is hidden
+Console.console_unknown_command  # Emitted when an unrecognized command is entered
+```
+
+### Properties
+
+```gdscript
+Console.enabled: bool                   # Enable/disable the console
+Console.enable_on_release_build: bool   # Allow console in release builds
+Console.pause_enabled: bool             # Pause the game while console is open
+Console.font_size: int                  # Override font size (-1 for default)
+```
 
 ---
 
 ## Credits
 
-<img src="screenshot_3.png" width="512" height="512" alt="Manage User Data icon">
-
 Made by [Lost Rabbit Digital](https://lostrabbit.digital/) · [Discord](https://discord.gg/Y7caBf7gBj)
 
 MIT — see [LICENSE](LICENSE)
+
+---
+
+<div align="center">
+
+## Special Thanks
+
+<br>
+
+### A huge thank you to [jitspoe](https://github.com/jitspoe) and the [Godot Console](https://github.com/jitspoe/godot-console) project!
+
+This plugin was built upon and inspired by their fantastic work.
+Their open-source developer console laid the foundation that made this project possible.
+
+If you're looking for the original, check it out:
+
+[![jitspoe/godot-console](https://img.shields.io/badge/GitHub-jitspoe%2Fgodot--console-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/jitspoe/godot-console)
+
+<br>
+
+</div>
