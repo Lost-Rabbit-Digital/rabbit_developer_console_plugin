@@ -35,6 +35,11 @@ func register_all() -> void:
 	console.add_command("restart", restart_scene, 0, 0, "Restarts the current scene.")
 	console.add_command("reload", restart_scene, 0, 0, "Restarts the current scene.")
 
+	# Display
+	console.add_command("fullscreen", fullscreen, 0, 0, "Sets the console to fullscreen mode.")
+	console.add_command("halfscreen", halfscreen, 0, 0, "Sets the console to half-screen mode.")
+	console.add_command("transparency", transparency, ["level 0-100"], 1, "Sets console background transparency (0=opaque, 100=invisible).")
+
 	# Audio
 	console.add_command("mute", mute, 0, 0, "Mutes all game audio.")
 	console.add_command("unmute", unmute, 0, 0, "Unmutes all game audio.")
@@ -71,9 +76,12 @@ func help() -> void:
   [color=#00ff00]echo_info[/color]        Print an info message
   [color=#00ff00]echo_warning[/color]     Print a warning message
   [color=#00ff00]exec[/color]             Execute commands from a script file
+  [color=#00ff00]fullscreen[/color]       Set console to fullscreen mode
+  [color=#00ff00]halfscreen[/color]       Set console to half-screen mode
   [color=#00ff00]mute[/color] / [color=#00ff00]unmute[/color]   Toggle game audio
   [color=#00ff00]pause[/color]            Pause node processing
   [color=#00ff00]restart[/color] / [color=#00ff00]reload[/color] Restart the current scene
+  [color=#00ff00]transparency[/color]     Set background transparency (0-100)
   [color=#00ff00]unpause[/color]          Resume node processing
   [color=#00ff00]volume[/color]           Set master volume (0.0-1.0)
   [color=#00ff00]volume_up[/color]        Increase volume by 10%%
@@ -146,6 +154,27 @@ func exec(filename : String) -> void:
 			console._on_text_entered(script.get_line())
 	else:
 		console.print_error("%s: No such file or directory" % [path])
+
+
+# ---- Display ----
+
+func fullscreen() -> void:
+	console.set_fullscreen()
+	console.print_info("Console set to fullscreen mode.")
+
+
+func halfscreen() -> void:
+	console.set_halfscreen()
+	console.print_info("Console set to half-screen mode.")
+
+
+func transparency(level : String) -> void:
+	if not level.is_valid_float():
+		console.print_error("transparency: '%s' is not a valid number (expected 0-100)" % level)
+		return
+	var value := clampf(level.to_float(), 0.0, 100.0)
+	console.set_bg_transparency(1.0 - value / 100.0)
+	console.print_info("Background transparency set to %d%%." % int(value))
 
 
 # ---- Scene management ----

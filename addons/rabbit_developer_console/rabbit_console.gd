@@ -7,6 +7,11 @@ var font_size := -1:
 	set(value):
 		font_size = value
 		_update_font_size()
+var is_fullscreen := true
+var bg_transparency := 0.85
+
+var _panel_style : StyleBoxFlat
+var _line_edit_style : StyleBoxFlat
 
 signal console_opened
 signal console_closed
@@ -91,7 +96,7 @@ func _enter_tree() -> void:
 	var canvas_layer := CanvasLayer.new()
 	canvas_layer.layer = 3
 	add_child(canvas_layer)
-	control.anchor_bottom = 1.0
+	control.anchor_bottom = 1.9 if is_fullscreen else 1.0
 	control.anchor_right = 1.0
 	canvas_layer.add_child(control)
 	control.add_child(panel)
@@ -99,11 +104,11 @@ func _enter_tree() -> void:
 	panel.anchor_bottom = 0.5
 
 	# Terminal-style dark background for the panel
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.07, 0.07, 0.07, 0.95)
-	panel_style.border_color = Color(0.2, 0.2, 0.2, 1.0)
-	panel_style.set_border_width_all(1)
-	panel.add_theme_stylebox_override("panel", panel_style)
+	_panel_style = StyleBoxFlat.new()
+	_panel_style.bg_color = Color(0.07, 0.07, 0.07, bg_transparency)
+	_panel_style.border_color = Color(0.2, 0.2, 0.2, 1.0)
+	_panel_style.set_border_width_all(1)
+	panel.add_theme_stylebox_override("panel", _panel_style)
 
 	rich_label.selection_enabled = true
 	rich_label.context_menu_enabled = true
@@ -128,13 +133,13 @@ func _enter_tree() -> void:
 	line_edit.placeholder_text = "Type 'help' for a list of commands"
 
 	# Terminal-style input field
-	var line_edit_style := StyleBoxFlat.new()
-	line_edit_style.bg_color = Color(0.05, 0.05, 0.05, 0.95)
-	line_edit_style.border_color = Color(0.2, 0.2, 0.2, 1.0)
-	line_edit_style.set_border_width_all(1)
-	line_edit_style.content_margin_left = 8
-	line_edit.add_theme_stylebox_override("normal", line_edit_style)
-	line_edit.add_theme_stylebox_override("focus", line_edit_style)
+	_line_edit_style = StyleBoxFlat.new()
+	_line_edit_style.bg_color = Color(0.05, 0.05, 0.05, bg_transparency)
+	_line_edit_style.border_color = Color(0.2, 0.2, 0.2, 1.0)
+	_line_edit_style.set_border_width_all(1)
+	_line_edit_style.content_margin_left = 8
+	line_edit.add_theme_stylebox_override("normal", _line_edit_style)
+	line_edit.add_theme_stylebox_override("focus", _line_edit_style)
 	line_edit.add_theme_color_override("font_color", Color(0.0, 1.0, 0.0, 1.0))
 	line_edit.add_theme_color_override("font_placeholder_color", Color(0.4, 0.4, 0.4, 1.0))
 	line_edit.add_theme_color_override("caret_color", Color(0.0, 1.0, 0.0, 1.0))
@@ -321,10 +326,30 @@ func reset_autocomplete() -> void:
 
 
 func toggle_size() -> void:
-	if (control.anchor_bottom == 1.0):
-		control.anchor_bottom = 1.9
-	else:
-		control.anchor_bottom = 1.0
+	is_fullscreen = !is_fullscreen
+	_apply_size()
+
+
+func set_fullscreen() -> void:
+	is_fullscreen = true
+	_apply_size()
+
+
+func set_halfscreen() -> void:
+	is_fullscreen = false
+	_apply_size()
+
+
+func _apply_size() -> void:
+	control.anchor_bottom = 1.9 if is_fullscreen else 1.0
+
+
+func set_bg_transparency(value : float) -> void:
+	bg_transparency = clampf(value, 0.0, 1.0)
+	if _panel_style:
+		_panel_style.bg_color.a = bg_transparency
+	if _line_edit_style:
+		_line_edit_style.bg_color.a = bg_transparency
 
 
 func disable():
@@ -345,10 +370,10 @@ func toggle_console() -> void:
 	if (control.visible):
 		was_paused_already = get_tree().paused
 		get_tree().paused = was_paused_already || pause_enabled
+		_apply_size()
 		line_edit.grab_focus()
 		console_opened.emit()
 	else:
-		control.anchor_bottom = 1.0
 		scroll_to_bottom()
 		reset_autocomplete()
 		if (pause_enabled && !was_paused_already):
