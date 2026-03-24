@@ -41,9 +41,11 @@ grow_vertical = 0
 [node name="CommandsLabel" type="Label" parent="CommandsPanel"]
 layout_mode = 2
 text = "Console Commands (~):
-  dvd_speed <speed>  - Set square speed
-  dvd_size <size>    - Set square size
-  dvd_color <color>  - Set square color
-  dvd_angle <degrees> - Set bounce angle"
+  create_dvd          - Spawn a new DVD
+  delete_dvd          - Remove one DVD
+  dvd_speed <speed>   - Set all DVD speeds
+  dvd_size <size>     - Set all DVD sizes
+  dvd_color <color>   - Set all DVD colors
+  dvd_angle <degrees> - Set all DVD angles"
 
 [connection signal="pressed" from="QuitButton" to="." method="_on_quit_button_pressed"]
