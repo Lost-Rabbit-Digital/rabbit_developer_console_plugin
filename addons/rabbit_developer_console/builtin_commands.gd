@@ -175,6 +175,7 @@ func help(command_name: String = "") -> void:
   [color=#5555ff]PageUp/PageDown[/color]   Scroll output buffer
   [color=#5555ff]Tab[/color]              Auto-complete; press again to cycle
   [color=#5555ff]Ctrl+~[/color]           Cycle console position
+  [color=#5555ff]Ctrl+=/Ctrl+-[/color]    Zoom in/out font size
   [color=#5555ff]Ctrl+Scroll[/color]      Adjust font size
   [color=#5555ff]~ / Esc[/color]          Close console
 ")
