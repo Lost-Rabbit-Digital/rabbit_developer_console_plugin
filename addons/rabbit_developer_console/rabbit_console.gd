@@ -555,6 +555,8 @@ func parse_line_input(text : String) -> PackedStringArray:
 
 # Returns [command_name, num_tokens_consumed] for the longest matching command
 # formed by joining tokens with underscores. Returns ["", 0] if no match found.
+# Supports Linux-style shorthands when no direct match exists. Values are arrays
+# of replacement tokens, e.g. "tree" -> ["print", "tree"] -> matches "print_tree".
 func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
 	var best_match := ""
 	var best_count := 0
@@ -563,6 +565,27 @@ func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
 		if console_commands.has(candidate):
 			best_match = candidate
 			best_count = i
+	if best_match.is_empty() and not tokens.is_empty():
+		var shorthands : Dictionary = {
+			"ls":    ["list"],          # ls scenes / ls autoloads / ls buses
+			"man":   ["help"],          # man, man commands
+			"tree":  ["print", "tree"], # tree -> print_tree
+			"cd":    ["load", "scene"], # cd my_scene.tscn -> load_scene
+			"pwd":   ["scene", "info"], # pwd -> scene_info
+			"uname": ["engine", "info"],# uname -> engine_info
+			"free":  ["mem"],           # free -> mem
+			"cls":   ["clear"],         # cls -> clear
+		}
+		if shorthands.has(tokens[0]):
+			var replacement : PackedStringArray = PackedStringArray(shorthands[tokens[0]])
+			var expanded := replacement + tokens.slice(1)
+			for i in range(1, expanded.size() + 1):
+				var candidate := "_".join(expanded.slice(0, i))
+				if console_commands.has(candidate):
+					best_match = candidate
+					# Convert expanded index back to original token count:
+					# replacement occupies replacement.size() expanded slots for 1 original token
+					best_count = i - replacement.size() + 1
 	return [best_match, best_count]
 
 
