@@ -1,0 +1,22 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Rabbit Developer Console Plugin"
+config/version="2.4.6"
+config/tags=PackedStringArray("active", "open_sourced", "plugin", "utility")
+run/main_scene="uid://kdoodofub67l"
+config/features=PackedStringArray("4.5", "Forward Plus")
+config/icon="uid://dbdiskknw1asj"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/manage_user_data/plugin.cfg")
