@@ -39,6 +39,7 @@ var command_parameters := {}
 var console_history := []
 var console_history_index := 0
 var was_paused_already := false
+var _builtin_commands : RefCounted
 
 ## Usage: Console.add_command("command_name", <function to call>, <number of arguments or array of argument names>, <required number of arguments>, "Help description")
 func add_command(command_name : String, function : Callable, arguments = [], required: int = 0, description : String = "") -> void:
@@ -193,21 +194,9 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	add_command("quit", quit, 0, 0, "Quits the game.")
-	add_command("exit", quit, 0, 0, "Quits the game.")
-	add_command("clear", clear, 0, 0, "Clears the text on the console.")
-	add_command("delete_history", delete_history, 0, 0, "Deletes the history of previously entered commands.")
-	add_command("help", help, 0, 0, "Displays instructions on how to use the console.")
-	add_command("commands_list", commands_list, 0, 0, "Lists all commands and their descriptions.")
-	add_command("commands", commands, 0, 0, "Lists commands with no descriptions.")
-	add_command("calc", calculate, ["mathematical expression to evaluate"], 0, "Evaluates the math passed in for quick arithmetic.")
-	add_command("echo", print_line, ["string"], 1, "Prints given string to the console.")
-	add_command("echo_warning", print_warning, ["string"], 1, "Prints given string as warning to the console.")
-	add_command("echo_info", print_info, ["string"], 1, "Prints given string as info to the console.")
-	add_command("echo_error", print_error, ["string"], 1, "Prints given string as an error to the console.")
-	add_command("pause", pause, 0, 0, "Pauses node processing.")
-	add_command("unpause", unpause, 0, 0, "Unpauses node processing.")
-	add_command("exec", exec, 1, 1, "Execute a script.")
+	var BuiltinCommands := load("res://addons/rabbit_developer_console/builtin_commands.gd")
+	_builtin_commands = BuiltinCommands.new(self)
+	_builtin_commands.register_all()
 
 
 func _input(event : InputEvent) -> void:
@@ -488,91 +477,6 @@ func _on_line_edit_text_changed(new_text : String) -> void:
 	reset_autocomplete()
 
 
-func quit() -> void:
-	get_tree().quit()
-
-
-func clear() -> void:
-	rich_label.clear()
-
-
-func delete_history() -> void:
-	console_history.clear()
-	console_history_index = 0
-	DirAccess.remove_absolute("user://console_history.txt")
-
-
-func help() -> void:
-	rich_label.append_text("[color=#ffff55]BUILT-IN COMMANDS[/color]
-  [color=#00ff00]calc[/color]             Evaluate a mathematical expression
-  [color=#00ff00]clear[/color]            Clear the terminal screen
-  [color=#00ff00]commands[/color]         List available commands
-  [color=#00ff00]commands_list[/color]    List commands with usage details
-  [color=#00ff00]delete_history[/color]   Clear command history
-  [color=#00ff00]echo[/color]             Print a string to stdout
-  [color=#00ff00]echo_error[/color]       Print a string to stderr
-  [color=#00ff00]echo_info[/color]        Print an info message
-  [color=#00ff00]echo_warning[/color]     Print a warning message
-  [color=#00ff00]exec[/color]             Execute commands from a script file
-  [color=#00ff00]pause[/color]            Pause node processing
-  [color=#00ff00]unpause[/color]          Resume node processing
-  [color=#00ff00]quit[/color] / [color=#00ff00]exit[/color]     Terminate the application
-
-[color=#ffff55]KEY BINDINGS[/color]
-  [color=#5555ff]Up/Down[/color]           Navigate command history
-  [color=#5555ff]PageUp/PageDown[/color]   Scroll output buffer
-  [color=#5555ff]Tab[/color]              Auto-complete; press again to cycle
-  [color=#5555ff]Ctrl+~[/color]           Toggle fullscreen/half-screen
-  [color=#5555ff]Ctrl+Scroll[/color]      Adjust font size
-  [color=#5555ff]~ / Esc[/color]          Close console
-")
-
-
-func calculate(command : String) -> void:
-	var expression := Expression.new()
-	var error = expression.parse(command)
-	if error:
-		print_error("%s" % expression.get_error_text())
-		return
-	var result = expression.execute()
-	if not expression.has_execute_failed():
-		print_line(str(result))
-	else:
-		print_error("%s" % expression.get_error_text())
-
-
-func commands() -> void:
-	var cmds := []
-	for command in console_commands:
-		if (!console_commands[command].hidden):
-			cmds.append(str(command))
-	cmds.sort()
-	var line := ""
-	for i in range(cmds.size()):
-		line += "[color=#00ff00]%s[/color]" % cmds[i]
-		if i < cmds.size() - 1:
-			line += "  "
-	rich_label.append_text(line + "\n")
-
-
-func commands_list() -> void:
-	var cmds := []
-	for command in console_commands:
-		if (!console_commands[command].hidden):
-			cmds.append(str(command))
-	cmds.sort()
-
-	for command in cmds:
-		var arguments_string := ""
-		var description : String = console_commands[command].description
-		for i in range(console_commands[command].arguments.size()):
-			if i < console_commands[command].required:
-				arguments_string += " [color=#5555ff]<" + console_commands[command].arguments[i] + ">[/color]"
-			else:
-				arguments_string += " [color=#666666][" + console_commands[command].arguments[i] + "][/color]"
-		rich_label.append_text("  [color=#00ff00]%-18s[/color]%s  [color=#888888]%s[/color]\n" % [command, arguments_string, description])
-	rich_label.append_text("\n")
-
 
 func add_input_history(text : String) -> void:
 	if (!console_history.size() || text != console_history.back()): # Don't add consecutive duplicates
@@ -587,19 +491,3 @@ func set_enable_on_release_build(enable : bool):
 			disable()
 
 
-func pause() -> void:
-	get_tree().paused = true
-
-
-func unpause() -> void:
-	get_tree().paused = false
-
-
-func exec(filename : String) -> void:
-	var path := "user://%s.txt" % [filename]
-	var script := FileAccess.open(path, FileAccess.READ)
-	if (script):
-		while (!script.eof_reached()):
-			_on_text_entered(script.get_line())
-	else:
-		print_error("%s: No such file or directory" % [path])
