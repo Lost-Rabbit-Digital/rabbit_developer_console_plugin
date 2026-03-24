@@ -58,6 +58,14 @@ var _dropdown_selected := -1
 const _MAX_DROPDOWN_ITEMS := 12
 const _DROPDOWN_ITEM_HEIGHT := 24
 
+# Tooltip panel
+var _tooltip_panel := Panel.new()
+var _tooltip_label := RichTextLabel.new()
+var _tooltip_style : StyleBoxFlat
+var _tooltip_visible := false
+var _tooltip_target_pos := Vector2.ZERO
+var _tooltip_tween : Tween
+
 ## Usage: Console.add_command("command_name", <function to call>, <number of arguments or array of argument names>, <required number of arguments>, "Help description", <array of default values for optional arguments>)
 func add_command(command_name : String, function : Callable, arguments = [], required: int = 0, description : String = "", defaults : Array = []) -> void:
 	var str_defaults : PackedStringArray
@@ -195,6 +203,36 @@ func _enter_tree() -> void:
 	_dropdown_panel.add_child(_dropdown_vbox)
 	control.add_child(_dropdown_panel)
 
+	# Tooltip hover panel
+	_tooltip_style = StyleBoxFlat.new()
+	_tooltip_style.bg_color = Color(0.09, 0.09, 0.09, 0.97)
+	_tooltip_style.border_color = Color(0.0, 0.7, 0.3, 0.7)
+	_tooltip_style.set_border_width_all(1)
+	_tooltip_style.set_corner_radius_all(3)
+	_tooltip_style.content_margin_left = 10
+	_tooltip_style.content_margin_right = 10
+	_tooltip_style.content_margin_top = 8
+	_tooltip_style.content_margin_bottom = 8
+	_tooltip_panel.add_theme_stylebox_override("panel", _tooltip_style)
+	_tooltip_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tooltip_panel.visible = false
+	_tooltip_panel.z_index = 10
+	_tooltip_panel.custom_minimum_size = Vector2(220, 0)
+	_tooltip_label.bbcode_enabled = true
+	_tooltip_label.scroll_active = false
+	_tooltip_label.fit_content = true
+	_tooltip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tooltip_label.anchor_right = 1.0
+	_tooltip_label.anchor_bottom = 1.0
+	_tooltip_label.add_theme_color_override("default_color", Color(0.75, 0.75, 0.75, 1.0))
+	if font_size > 0:
+		var tip_fs := maxi(11, font_size - 2)
+		_tooltip_label.add_theme_font_size_override("normal_font_size", tip_fs)
+		_tooltip_label.add_theme_font_size_override("bold_font_size", tip_fs)
+		_tooltip_label.add_theme_font_size_override("mono_font_size", tip_fs)
+	_tooltip_panel.add_child(_tooltip_label)
+	control.add_child(_tooltip_panel)
+
 	line_edit.text_submitted.connect(_on_text_entered)
 	line_edit.text_changed.connect(_on_line_edit_text_changed)
 	control.visible = false
@@ -221,6 +259,8 @@ func _on_meta_hover_started(meta : Variant) -> void:
 	var meta_str := str(meta)
 	if meta_str.begins_with("cmd://"):
 		rich_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var command_name := meta_str.substr("cmd://".length())
+		_show_command_tooltip(command_name)
 		return
 	if not meta_str.begins_with("node://"):
 		return
@@ -240,6 +280,120 @@ func _on_meta_hover_ended(meta : Variant) -> void:
 	if _hover_highlighted_node and is_instance_valid(_hover_highlighted_node):
 		_hover_highlighted_node.modulate = _hover_original_modulate
 	_hover_highlighted_node = null
+	_hide_tooltip()
+
+
+func _show_command_tooltip(command_name : String) -> void:
+	if not console_commands.has(command_name):
+		return
+	var cmd : ConsoleCommand = console_commands[command_name]
+	var display_name := command_name.replace("_", " ")
+
+	# Build usage line
+	var usage := "[color=#00ff00]" + display_name + "[/color]"
+	for i in range(cmd.arguments.size()):
+		if i < cmd.required:
+			usage += " [color=#5555ff]<" + cmd.arguments[i] + ">[/color]"
+		else:
+			usage += " [color=#666666][" + cmd.arguments[i] + "][/color]"
+
+	var bbcode := "[b][color=#ffcc00]" + display_name.to_upper() + "[/color][/b]\n"
+	bbcode += usage + "\n"
+	if not cmd.description.is_empty():
+		bbcode += "[color=#aaaaaa]" + cmd.description + "[/color]"
+	else:
+		bbcode += "[color=#666666](no description)[/color]"
+
+	_tooltip_label.clear()
+	_tooltip_label.append_text(bbcode)
+
+	# Position near mouse, clamped within console bounds
+	_position_tooltip_at_mouse()
+	_tooltip_panel.modulate = Color(1, 1, 1, 0)
+	_tooltip_panel.visible = true
+	_tooltip_visible = true
+
+	# Animate fade-in
+	if _tooltip_tween and _tooltip_tween.is_valid():
+		_tooltip_tween.kill()
+	_tooltip_tween = create_tween()
+	_tooltip_tween.tween_property(_tooltip_panel, "modulate", Color(1, 1, 1, 1), 0.15)
+
+
+func _show_dropdown_tooltip(command_name : String, anchor_rect : Rect2) -> void:
+	if not console_commands.has(command_name):
+		_hide_tooltip()
+		return
+	var cmd : ConsoleCommand = console_commands[command_name]
+	var display_name := command_name.replace("_", " ")
+
+	var usage := "[color=#00ff00]" + display_name + "[/color]"
+	for i in range(cmd.arguments.size()):
+		if i < cmd.required:
+			usage += " [color=#5555ff]<" + cmd.arguments[i] + ">[/color]"
+		else:
+			usage += " [color=#666666][" + cmd.arguments[i] + "][/color]"
+
+	var bbcode := "[b][color=#ffcc00]" + display_name.to_upper() + "[/color][/b]\n"
+	bbcode += usage + "\n"
+	if not cmd.description.is_empty():
+		bbcode += "[color=#aaaaaa]" + cmd.description + "[/color]"
+	else:
+		bbcode += "[color=#666666](no description)[/color]"
+
+	_tooltip_label.clear()
+	_tooltip_label.append_text(bbcode)
+
+	# Position to the right of the dropdown item
+	await get_tree().process_frame
+	var tip_w := maxf(_tooltip_panel.custom_minimum_size.x, _tooltip_label.get_content_width() + 24)
+	var tip_h := _tooltip_label.get_content_height() + 20
+	var x := anchor_rect.position.x + anchor_rect.size.x + 6
+	var y := anchor_rect.position.y
+	# Clamp within console
+	if x + tip_w > control.size.x:
+		x = anchor_rect.position.x - tip_w - 6
+	if y + tip_h > control.size.y:
+		y = control.size.y - tip_h - 4
+	_tooltip_panel.position = Vector2(x, maxf(4, y))
+	_tooltip_panel.size = Vector2(tip_w, tip_h)
+	_tooltip_panel.modulate = Color(1, 1, 1, 0)
+	_tooltip_panel.visible = true
+	_tooltip_visible = true
+
+	if _tooltip_tween and _tooltip_tween.is_valid():
+		_tooltip_tween.kill()
+	_tooltip_tween = create_tween()
+	_tooltip_tween.tween_property(_tooltip_panel, "modulate", Color(1, 1, 1, 1), 0.12)
+
+
+func _position_tooltip_at_mouse() -> void:
+	await get_tree().process_frame
+	if not _tooltip_visible:
+		return
+	var mouse_pos := control.get_local_mouse_position()
+	var tip_w := maxf(_tooltip_panel.custom_minimum_size.x, _tooltip_label.get_content_width() + 24)
+	var tip_h := _tooltip_label.get_content_height() + 20
+	var x := mouse_pos.x + 16
+	var y := mouse_pos.y - tip_h - 8
+	# Clamp within console bounds
+	if x + tip_w > control.size.x:
+		x = mouse_pos.x - tip_w - 8
+	if y < 4:
+		y = mouse_pos.y + 20
+	_tooltip_panel.position = Vector2(maxf(4, x), maxf(4, y))
+	_tooltip_panel.size = Vector2(tip_w, tip_h)
+
+
+func _hide_tooltip() -> void:
+	if not _tooltip_visible:
+		return
+	_tooltip_visible = false
+	if _tooltip_tween and _tooltip_tween.is_valid():
+		_tooltip_tween.kill()
+	_tooltip_tween = create_tween()
+	_tooltip_tween.tween_property(_tooltip_panel, "modulate", Color(1, 1, 1, 0), 0.1)
+	_tooltip_tween.tween_callback(func(): _tooltip_panel.visible = false)
 
 
 func _get_hostname() -> String:
@@ -287,6 +441,15 @@ func _update_font_size():
 		rich_label.remove_theme_font_size_override("bold_italics_font_size")
 		rich_label.remove_theme_font_size_override("italics_font_size")
 		rich_label.remove_theme_font_size_override("mono_font_size")
+	if font_size > 0:
+		var tip_fs := maxi(11, font_size - 2)
+		_tooltip_label.add_theme_font_size_override("normal_font_size", tip_fs)
+		_tooltip_label.add_theme_font_size_override("bold_font_size", tip_fs)
+		_tooltip_label.add_theme_font_size_override("mono_font_size", tip_fs)
+	else:
+		_tooltip_label.remove_theme_font_size_override("normal_font_size")
+		_tooltip_label.remove_theme_font_size_override("bold_font_size")
+		_tooltip_label.remove_theme_font_size_override("mono_font_size")
 	var input_h := _get_input_height()
 	line_edit.offset_top = -input_h
 	panel.offset_bottom = -input_h
@@ -562,6 +725,7 @@ func toggle_console() -> void:
 		scroll_to_bottom()
 		reset_autocomplete()
 		_dropdown_panel.visible = false
+		_hide_tooltip()
 		if (pause_enabled && !was_paused_already):
 			get_tree().paused = false
 		console_closed.emit()
@@ -686,6 +850,7 @@ func _on_text_entered(new_text : String) -> void:
 	_dropdown_panel.visible = false
 	_dropdown_matches.clear()
 	_dropdown_selected = -1
+	_hide_tooltip()
 	line_edit.clear()
 	if (line_edit.has_method(&"edit")):
 		line_edit.call_deferred(&"edit")
@@ -826,6 +991,8 @@ func _update_dropdown(text : String) -> void:
 		if font_size > 0:
 			btn.add_theme_font_size_override("font_size", font_size)
 		btn.pressed.connect(_on_dropdown_item_pressed.bind(match_text))
+		btn.mouse_entered.connect(_on_dropdown_item_hover.bind(match_text, btn))
+		btn.mouse_exited.connect(_hide_tooltip)
 		_dropdown_vbox.add_child(btn)
 
 	var panel_height := display_count * item_height + 4
@@ -860,6 +1027,32 @@ func _on_dropdown_item_pressed(match_text : String) -> void:
 	_dropdown_matches.clear()
 	_dropdown_selected = -1
 	reset_autocomplete()
+	_hide_tooltip()
+
+
+func _on_dropdown_item_hover(match_text : String, btn : Button) -> void:
+	# Resolve command name (replace spaces with underscores for lookup)
+	var cmd_name := match_text.replace(" ", "_")
+	# If it contains a parameter (e.g. "load scene my_scene"), use only the command part
+	if " " in match_text:
+		var parts := match_text.split(" ")
+		# Try progressively longer command names
+		var best := ""
+		for i in range(1, parts.size() + 1):
+			var candidate := "_".join(parts.slice(0, i))
+			if console_commands.has(candidate):
+				best = candidate
+		cmd_name = best if not best.is_empty() else parts[0]
+
+	if not console_commands.has(cmd_name):
+		return
+
+	# Calculate button's global rect relative to control
+	var btn_rect := Rect2(
+		_dropdown_panel.position + btn.position,
+		btn.size
+	)
+	_show_dropdown_tooltip(cmd_name, btn_rect)
 
 
 func add_input_history(text : String) -> void:
