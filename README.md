@@ -139,3 +139,24 @@ Console.font_size: int                  # Override font size (-1 for default)
 Made by [Lost Rabbit Digital](https://lostrabbit.digital/) · [Discord](https://discord.gg/Y7caBf7gBj)
 
 MIT — see [LICENSE](LICENSE)
+
+---
+
+<div align="center">
+
+## Special Thanks
+
+<br>
+
+### A huge thank you to [jitspoe](https://github.com/jitspoe) and the [Godot Console](https://github.com/jitspoe/godot-console) project!
+
+This plugin was built upon and inspired by their fantastic work.
+Their open-source developer console laid the foundation that made this project possible.
+
+If you're looking for the original, check it out:
+
+[![jitspoe/godot-console](https://img.shields.io/badge/GitHub-jitspoe%2Fgodot--console-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/jitspoe/godot-console)
+
+<br>
+
+</div>
