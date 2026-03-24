@@ -27,7 +27,7 @@ func register_all() -> void:
 
 	# Utility
 	console.add_command("calc", calculate, ["mathematical expression to evaluate"], 0, "Evaluates the math passed in for quick arithmetic.")
-	console.add_command("exec", exec, 1, 1, "Execute a script.")
+	console.add_command("exec", exec, ["filename"], 1, "Execute a script.")
 
 	# Scene management
 	console.add_command("pause", pause, 0, 0, "Pauses node processing.")
