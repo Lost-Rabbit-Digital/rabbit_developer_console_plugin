@@ -265,6 +265,12 @@ func _print_motd() -> void:
 	rich_label.append_text("[color=#666666]Last login: %s on tty1[/color]\n\n" % Time.get_datetime_string_from_system())
 
 
+func _get_input_height() -> int:
+	if font_size > 0:
+		return maxi(30, font_size + 14)
+	return 30
+
+
 func _update_font_size():
 	if font_size > 0:
 		line_edit.add_theme_font_size_override("font_size", font_size)
@@ -280,6 +286,10 @@ func _update_font_size():
 		rich_label.remove_theme_font_size_override("bold_italics_font_size")
 		rich_label.remove_theme_font_size_override("italics_font_size")
 		rich_label.remove_theme_font_size_override("mono_font_size")
+	var input_h := _get_input_height()
+	line_edit.offset_top = -input_h
+	panel.offset_bottom = -input_h
+	_dropdown_panel.offset_bottom = -input_h
 
 
 func _exit_tree() -> void:
@@ -754,7 +764,8 @@ func _update_dropdown(text : String) -> void:
 
 	var item_fs : int = font_size if font_size > 0 else 14
 	var item_height : int = maxi(_DROPDOWN_ITEM_HEIGHT, item_fs + 8)
-	var available_height : int = int(control.size.y) - 30
+	var input_h := _get_input_height()
+	var available_height : int = int(control.size.y) - input_h
 	var max_items_fit : int = max(1, int((available_height - 4) / item_height))
 	var display_count := mini(_dropdown_matches.size(), mini(_MAX_DROPDOWN_ITEMS, max_items_fit))
 
@@ -786,7 +797,7 @@ func _update_dropdown(text : String) -> void:
 		_dropdown_vbox.add_child(btn)
 
 	var panel_height := display_count * item_height + 4
-	_dropdown_panel.offset_top = -30 - panel_height
+	_dropdown_panel.offset_top = -input_h - panel_height
 	_dropdown_panel.offset_right = 300
 	_dropdown_panel.visible = true
 
