@@ -687,7 +687,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]clear[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]delete history[/color]
+  [url=cmd://delete_history][color=#00ff00]delete history[/color][/url]
 
 """,
 # -------
@@ -704,7 +704,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]delete history[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]clear[/color]
+  [url=cmd://clear][color=#00ff00]clear[/color][/url]
 
 """,
 # -------
@@ -732,7 +732,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]help[/color] vsync
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]commands[/color]  [color=#00ff00]commands list[/color]
+  [url=cmd://commands][color=#00ff00]commands[/color][/url]  [url=cmd://commands_list][color=#00ff00]commands list[/color][/url]
 
 """,
 # -------
@@ -749,7 +749,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]commands[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]commands list[/color]  [color=#00ff00]help[/color]
+  [url=cmd://commands_list][color=#00ff00]commands list[/color][/url]  [url=cmd://help][color=#00ff00]help[/color][/url]
 
 """,
 # -------
@@ -766,7 +766,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]commands list[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]commands[/color]  [color=#00ff00]help[/color]
+  [url=cmd://commands][color=#00ff00]commands[/color][/url]  [url=cmd://help][color=#00ff00]help[/color][/url]
 
 """,
 # ---- Output ----
@@ -900,7 +900,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]console lower_right[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]transparency[/color]
+  [url=cmd://transparency][color=#00ff00]transparency[/color][/url]
 
 """,
 # -------
@@ -926,7 +926,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]transparency[/color] 85
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]console full[/color]
+  [url=cmd://console_full][color=#00ff00]console full[/color][/url]
 
 """,
 # ---- Time ----
@@ -957,7 +957,7 @@ func _build_help_pages() -> Dictionary:
   itself are not slowed down.
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]pause[/color]  [color=#00ff00]physics toggle[/color]
+  [url=cmd://pause][color=#00ff00]pause[/color][/url]  [url=cmd://physics_toggle][color=#00ff00]physics toggle[/color][/url]
 
 """,
 # ---- Scene ----
@@ -977,7 +977,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]unpause[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]timescale[/color]  [color=#00ff00]physics toggle[/color]
+  [url=cmd://timescale][color=#00ff00]timescale[/color][/url]  [url=cmd://physics_toggle][color=#00ff00]physics toggle[/color][/url]
 
 """,
 # -------
@@ -994,7 +994,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]reload[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]load scene[/color]  [color=#00ff00]scene info[/color]
+  [url=cmd://load_scene][color=#00ff00]load scene[/color][/url]  [url=cmd://scene_info][color=#00ff00]scene info[/color][/url]
 
 """,
 # -------
@@ -1022,7 +1022,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]load scene[/color] main
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]list scenes[/color]  [color=#00ff00]restart[/color]  [color=#00ff00]scene info[/color]
+  [url=cmd://list_scenes][color=#00ff00]list scenes[/color][/url]  [url=cmd://restart][color=#00ff00]restart[/color][/url]  [url=cmd://scene_info][color=#00ff00]scene info[/color][/url]
 
 """,
 # -------
@@ -1039,7 +1039,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]ls[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]load scene[/color]  [color=#00ff00]scene info[/color]  [color=#00ff00]list scenes[/color]
+  [url=cmd://load_scene][color=#00ff00]load scene[/color][/url]  [url=cmd://scene_info][color=#00ff00]scene info[/color][/url]  [url=cmd://list_scenes][color=#00ff00]list scenes[/color][/url]
 
 """,
 # -------
@@ -1055,7 +1055,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]list scenes[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]load scene[/color]  [color=#00ff00]scene info[/color]
+  [url=cmd://load_scene][color=#00ff00]load scene[/color][/url]  [url=cmd://scene_info][color=#00ff00]scene info[/color][/url]
 
 """,
 # -------
@@ -1071,7 +1071,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]list scripts[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]exec[/color]
+  [url=cmd://exec][color=#00ff00]exec[/color][/url]
 
 """,
 # -------
@@ -1087,7 +1087,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]scene info[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]print tree[/color]  [color=#00ff00]list scenes[/color]  [color=#00ff00]restart[/color]
+  [url=cmd://print_tree][color=#00ff00]print tree[/color][/url]  [url=cmd://list_scenes][color=#00ff00]list scenes[/color][/url]  [url=cmd://restart][color=#00ff00]restart[/color][/url]
 
 """,
 # ---- Inspection ----
@@ -1104,7 +1104,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]print tree[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]print node[/color]  [color=#00ff00]scene info[/color]
+  [url=cmd://print_node][color=#00ff00]print node[/color][/url]  [url=cmd://scene_info][color=#00ff00]scene info[/color][/url]
 
 """,
 # -------
@@ -1130,7 +1130,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]print node[/color] /root/Main/HUD
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]print tree[/color]  [color=#00ff00]list autoloads[/color]
+  [url=cmd://print_tree][color=#00ff00]print tree[/color][/url]  [url=cmd://list_autoloads][color=#00ff00]list autoloads[/color][/url]
 
 """,
 # -------
@@ -1147,7 +1147,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]list autoloads[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]print node[/color]  [color=#00ff00]engine info[/color]
+  [url=cmd://print_node][color=#00ff00]print node[/color][/url]  [url=cmd://engine_info][color=#00ff00]engine info[/color][/url]
 
 """,
 # -------
@@ -1168,7 +1168,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]engine info[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]fps[/color]  [color=#00ff00]mem[/color]  [color=#00ff00]vsync[/color]
+  [url=cmd://fps][color=#00ff00]fps[/color][/url]  [url=cmd://mem][color=#00ff00]mem[/color][/url]  [url=cmd://vsync][color=#00ff00]vsync[/color][/url]
 
 """,
 # ---- Performance ----
@@ -1189,7 +1189,7 @@ func _build_help_pages() -> Dictionary:
   Godot's built-in [color=#888888]Profiler[/color] or the [color=#888888]Performance[/color] singleton.
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]mem[/color]  [color=#00ff00]engine info[/color]  [color=#00ff00]vsync[/color]
+  [url=cmd://mem][color=#00ff00]mem[/color][/url]  [url=cmd://engine_info][color=#00ff00]engine info[/color][/url]  [url=cmd://vsync][color=#00ff00]vsync[/color][/url]
 
 """,
 # -------
@@ -1211,7 +1211,7 @@ func _build_help_pages() -> Dictionary:
   not appear in exported release builds.
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]fps[/color]  [color=#00ff00]engine info[/color]
+  [url=cmd://fps][color=#00ff00]fps[/color][/url]  [url=cmd://engine_info][color=#00ff00]engine info[/color][/url]
 
 """,
 # -------
@@ -1242,7 +1242,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]vsync[/color] adaptive
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]fps[/color]  [color=#00ff00]engine info[/color]
+  [url=cmd://fps][color=#00ff00]fps[/color][/url]  [url=cmd://engine_info][color=#00ff00]engine info[/color][/url]
 
 """,
 # -------
@@ -1263,7 +1263,7 @@ func _build_help_pages() -> Dictionary:
   their own [color=#888888]process_mode[/color] will not be affected.
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]pause[/color]  [color=#00ff00]timescale[/color]
+  [url=cmd://pause][color=#00ff00]pause[/color][/url]  [url=cmd://timescale][color=#00ff00]timescale[/color][/url]
 
 """,
 # ---- Audio ----
@@ -1281,7 +1281,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]unmute[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]volume[/color]  [color=#00ff00]list buses[/color]
+  [url=cmd://volume][color=#00ff00]volume[/color][/url]  [url=cmd://list_buses][color=#00ff00]list buses[/color][/url]
 
 """,
 # -------
@@ -1317,7 +1317,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]volume down[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]mute[/color]  [color=#00ff00]list buses[/color]
+  [url=cmd://mute][color=#00ff00]mute[/color][/url]  [url=cmd://list_buses][color=#00ff00]list buses[/color][/url]
 
 """,
 # -------
@@ -1334,7 +1334,7 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]list buses[/color]
 
 [color=#ffff55]SEE ALSO[/color]
-  [color=#00ff00]mute[/color]  [color=#00ff00]volume[/color]
+  [url=cmd://mute][color=#00ff00]mute[/color][/url]  [url=cmd://volume][color=#00ff00]volume[/color][/url]
 
 """,
 	}
