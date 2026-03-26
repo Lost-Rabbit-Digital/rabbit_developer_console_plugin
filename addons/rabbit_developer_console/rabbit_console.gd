@@ -893,6 +893,11 @@ func _on_text_entered(new_text : String) -> void:
 				line_edit.caret_column = new_text.length()
 				return
 			elif (arguments.size() > console_command.arguments.size()):
+				if console_command.arguments.size() > 0:
+					# Join excess tokens into the last argument so multi-word
+					# values (e.g. "help load scene") are preserved.
+					var last := console_command.arguments.size() - 1
+					arguments[last] = " ".join(arguments.slice(last))
 				arguments.resize(console_command.arguments.size())
 
 			# Functions fail to call if passed the incorrect number of arguments, so fill with defaults or blank strings.
