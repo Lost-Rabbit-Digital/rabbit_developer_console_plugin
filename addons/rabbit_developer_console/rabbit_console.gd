@@ -473,9 +473,14 @@ func _ready() -> void:
 	_builtin_commands = BuiltinCommands.new(self)
 	_builtin_commands.register_all()
 	_builtin_command_names = PackedStringArray(console_commands.keys())
+	# Setters don't run for a member's initial value, so apply the release default here.
+	if (!enable_on_release_build and !OS.is_debug_build()):
+		enabled = false
 
 
 func _input(event : InputEvent) -> void:
+	if (!enabled):
+		return
 	if (event is InputEventKey):
 		if (event.get_physical_keycode_with_modifiers() == KEY_QUOTELEFT): # ~ key.
 			if (event.pressed):
