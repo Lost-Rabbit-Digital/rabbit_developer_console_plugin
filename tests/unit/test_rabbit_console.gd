@@ -11,8 +11,11 @@ const HISTORY := "user://test_console_history.txt"
 ## debug editor binary.
 class FakeBuildConsole extends "res://addons/rabbit_developer_console/rabbit_console.gd":
 	var fake_release := false
+	var opened_urls: Array = []
 	func _is_release_build() -> bool:
 		return fake_release
+	func _open_external_url(url: String) -> void:
+		opened_urls.append(url)
 
 
 func before_test() -> void:
@@ -191,3 +194,83 @@ func test_unknown_command_emits_signal() -> void:
 	var monitor := monitor_signals(console, false)
 	console._on_text_entered("definitely_not_a_command")
 	await assert_signal(monitor).is_emitted("console_unknown_command", ["definitely_not_a_command"])
+
+
+# ---- Links and untrusted text ----
+
+func test_safe_external_url_accepts_web_links() -> void:
+	var console := _make_console()
+	for url in [
+		"https://discord.gg/Y7caBf7gBj",
+		"http://example.com",
+		"HTTPS://Example.com/path?q=1#frag",
+		"https://example.com:8443/a/b",
+		"http://[::1]:8080/",
+		"https://bücher.example/",
+	]:
+		assert_bool(console.is_safe_external_url(url)).override_failure_message(url).is_true()
+
+
+func test_safe_external_url_rejects_everything_else() -> void:
+	var console := _make_console()
+	var bs := char(92)
+	var q := char(34)
+	for url in [
+		"file:///C:/Windows/System32/calc.exe",
+		"FILE:///etc/passwd",
+		"javascript:alert(1)",
+		"steam://run/440",
+		"ms-settings:",
+		"mailto:a@b.c",
+		"C:" + bs + "Windows" + bs + "notepad.exe",
+		bs + bs + "server" + bs + "share",
+		"/usr/bin/xterm",
+		"http://",
+		"https:///path",
+		" https://example.com",
+		"https://example.com\nfile:///x",
+		"https://exa mple.com",
+		"https://example.com" + char(1) + ".evil",
+		"https://good.example@evil.example/",
+		"https://example.com:0/",
+		"https://example.com:99999/",
+		"https://example.com:-1/",
+		"https://example.com:/",
+		"https://example..com/",
+		"https://example.com/" + bs + "..",
+		"https://example.com/" + q + "onclick",
+		"http://[::1",
+	]:
+		assert_bool(console.is_safe_external_url(url)).override_failure_message(url).is_false()
+
+
+func test_clicked_file_link_is_not_opened() -> void:
+	var console := _make_console()
+	console._on_console_link_clicked("file:///C:/Windows/System32/calc.exe")
+	console._on_console_link_clicked("steam://run/440")
+	assert_array(console.opened_urls).is_empty()
+	assert_str(console.rich_label.get_parsed_text()).contains("refused to open link")
+
+
+func test_clicked_web_link_is_opened() -> void:
+	var console := _make_console()
+	console._on_console_link_clicked("https://example.com/docs")
+	assert_array(console.opened_urls).is_equal(["https://example.com/docs"])
+
+
+func test_print_plain_shows_bbcode_literally() -> void:
+	var console := _make_console()
+	var hostile := "[url=file:///C:/evil.exe]click[/url] [color=red]x[/color] ]["
+	console.rich_label.clear()
+	console.print_plain(hostile)
+	assert_str(console.rich_label.get_parsed_text()).is_equal(hostile + "\n")
+
+
+func test_entered_text_is_echoed_literally() -> void:
+	# The echoed command line must not turn typed (or exec-script) BBCode into a live link.
+	var console := _make_console()
+	console.rich_label.clear()
+	console._on_text_entered("[url=file:///C:/evil.exe]x[/url]")
+	var shown: String = console.rich_label.get_parsed_text()
+	assert_str(shown).contains("[url=file:///C:/evil.exe]x[/url]")
+	assert_str(shown).contains("command not found")

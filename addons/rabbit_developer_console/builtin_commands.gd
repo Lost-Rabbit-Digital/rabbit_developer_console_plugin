@@ -9,6 +9,12 @@ func _init(in_console : Node) -> void:
 	console = in_console
 
 
+## Shorthand for escaping text that came from the player, a file or the game's scene tree
+## before it is printed, so stray brackets can't be read as BBCode (including [url] links).
+func _e(text : Variant) -> String:
+	return console.escape_bbcode(str(text))
+
+
 func register_all() -> void:
 	# General
 	console.add_command("quit", quit, 0, 0, "Quits the game.")
@@ -262,7 +268,7 @@ var _exec_depth := 0
 
 func exec(filename : String) -> void:
 	if filename.contains("..") or filename.is_absolute_path():
-		console.print_error("exec: scripts must be inside user:// (got '%s')" % filename)
+		console.print_error("exec: scripts must be inside user:// (got '%s')" % _e(filename))
 		return
 	if _exec_depth >= MAX_EXEC_DEPTH:
 		console.print_error("exec: nested too deep (max %d); does a script exec itself?" % MAX_EXEC_DEPTH)
@@ -275,7 +281,7 @@ func exec(filename : String) -> void:
 			console._on_text_entered(script.get_line())
 		_exec_depth -= 1
 	else:
-		console.print_error("%s: No such file or directory" % [path])
+		console.print_error("%s: No such file or directory" % [_e(path)])
 
 
 func list_scripts() -> void:
@@ -295,7 +301,7 @@ func list_scripts() -> void:
 		return
 	console.print_line("[color=#ffff55]SCRIPTS (%d)[/color]" % scripts.size())
 	for script in scripts:
-		console.print_line("  %s" % script)
+		console.print_line("  %s" % _e(script))
 
 
 # ---- Display ----
@@ -347,7 +353,7 @@ func console_lower_right() -> void:
 
 func transparency(level : String) -> void:
 	if not level.is_valid_float():
-		console.print_error("transparency: '%s' is not a valid number (expected 0-100)" % level)
+		console.print_error("transparency: '%s' is not a valid number (expected 0-100)" % _e(level))
 		return
 	var value := clampf(level.to_float(), 0.0, 100.0)
 	console.set_bg_transparency(1.0 - value / 100.0)
@@ -389,7 +395,7 @@ func unmute() -> void:
 
 func set_volume(level : String) -> void:
 	if not level.is_valid_float():
-		console.print_error("volume: '%s' is not a valid number (expected 0.0-1.0)" % level)
+		console.print_error("volume: '%s' is not a valid number (expected 0.0-1.0)" % _e(level))
 		return
 	var value := clampf(level.to_float(), 0.0, 1.0)
 	var bus := _get_master_bus_index()
@@ -427,15 +433,15 @@ func list_audio_buses() -> void:
 		var muted := AudioServer.is_bus_mute(i)
 		var send := AudioServer.get_bus_send(i)
 		var status := " [color=#ff4444](muted)[/color]" if muted else ""
-		var send_info := " -> %s" % send if send else ""
-		console.print_line("  [color=#00ff00]%s[/color]  %d%%%s%s" % [name, int(vol * 100), status, send_info])
+		var send_info := " -> %s" % _e(send) if send else ""
+		console.print_line("  [color=#00ff00]%s[/color]  %d%%%s%s" % [_e(name), int(vol * 100), status, send_info])
 
 
 # ---- Time ----
 
 func set_timescale(speed : String) -> void:
 	if not speed.is_valid_float():
-		console.print_error("timescale: '%s' is not a valid number" % speed)
+		console.print_error("timescale: '%s' is not a valid number" % _e(speed))
 		return
 	var value := maxf(speed.to_float(), 0.0)
 	Engine.time_scale = value
@@ -489,7 +495,7 @@ func set_vsync(mode : String) -> void:
 	var modes := {"disabled": 0, "enabled": 1, "adaptive": 2, "mailbox": 3}
 	var lower := mode.to_lower()
 	if not modes.has(lower):
-		console.print_error("vsync: unknown mode '%s'. Use: disabled, enabled, adaptive, mailbox" % mode)
+		console.print_error("vsync: unknown mode '%s'. Use: disabled, enabled, adaptive, mailbox" % _e(mode))
 		return
 	DisplayServer.window_set_vsync_mode(modes[lower])
 	console.print_info("VSync set to %s." % lower)
@@ -502,16 +508,18 @@ func print_tree_cmd() -> void:
 	if not root:
 		console.print_warning("No current scene.")
 		return
-	console.print_line("[color=#ffff55]SCENE TREE[/color]: %s" % root.scene_file_path)
+	console.print_line("[color=#ffff55]SCENE TREE[/color]: %s" % _e(root.scene_file_path))
 	_print_node_recursive(root, "")
 
 
 func _print_node_recursive(node : Node, indent : String) -> void:
 	var type_color := "#5555ff"
-	var node_path := str(console.get_tree().current_scene.get_path_to(node))
-	var name_str := "[url=node://%s][color=#00ff00]%s[/color] [color=%s](%s)[/color][/url]" % [node_path, node.name, type_color, node.get_class()]
+	# Node names may hold brackets (or player names), so the link target is URI-encoded and the
+	# label escaped; the hover handler decodes the path again.
+	var node_path := str(console.get_tree().current_scene.get_path_to(node)).uri_encode()
+	var name_str := "[url=node://%s][color=#00ff00]%s[/color] [color=%s](%s)[/color][/url]" % [node_path, _e(node.name), type_color, node.get_class()]
 	if node.scene_file_path and node != console.get_tree().current_scene:
-		name_str += " [color=#666666]@ %s[/color]" % node.scene_file_path
+		name_str += " [color=#666666]@ %s[/color]" % _e(node.scene_file_path)
 	console.print_line("%s%s" % [indent, name_str])
 	for child in node.get_children():
 		_print_node_recursive(child, indent + "  ")
@@ -527,14 +535,14 @@ func print_node(node_path : String) -> void:
 		# Try absolute path
 		node = console.get_tree().root.get_node_or_null(node_path)
 	if not node:
-		console.print_error("Node not found: %s" % node_path)
+		console.print_error("Node not found: %s" % _e(node_path))
 		return
-	console.print_line("[color=#ffff55]NODE:[/color] %s [color=#5555ff](%s)[/color]" % [node.name, node.get_class()])
-	console.print_line("  Path:     %s" % str(node.get_path()))
-	console.print_line("  Owner:    %s" % (str(node.owner.name) if node.owner else "none"))
+	console.print_line("[color=#ffff55]NODE:[/color] %s [color=#5555ff](%s)[/color]" % [_e(node.name), node.get_class()])
+	console.print_line("  Path:     %s" % _e(node.get_path()))
+	console.print_line("  Owner:    %s" % (_e(node.owner.name) if node.owner else "none"))
 	console.print_line("  Children: %d" % node.get_child_count())
 	if node.scene_file_path:
-		console.print_line("  Scene:    %s" % node.scene_file_path)
+		console.print_line("  Scene:    %s" % _e(node.scene_file_path))
 	if node is Node2D:
 		console.print_line("  Position: %s" % str(node.global_position))
 	elif node is Node3D:
@@ -542,12 +550,12 @@ func print_node(node_path : String) -> void:
 	# List exported properties via script
 	var script : Script = node.get_script()
 	if script:
-		console.print_line("  Script:   %s" % script.resource_path)
+		console.print_line("  Script:   %s" % _e(script.resource_path))
 		var props := node.get_property_list()
 		var script_props := []
 		for prop in props:
 			if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-				script_props.append("    %s = %s" % [prop.name, str(node.get(prop.name))])
+				script_props.append("    %s = %s" % [_e(prop.name), _e(node.get(prop.name))])
 		if script_props.size():
 			console.print_line("  [color=#ffff55]Script vars:[/color]")
 			for line in script_props:
@@ -604,13 +612,13 @@ func load_scene(scene_path : String) -> void:
 	if not full_path.ends_with(".tscn"):
 		full_path += ".tscn"
 	if not ResourceLoader.exists(full_path):
-		console.print_error("Scene not found: %s" % full_path)
+		console.print_error("Scene not found: %s" % _e(full_path))
 		return
 	var err := console.get_tree().change_scene_to_file(full_path)
 	if err == OK:
-		console.print_info("Loading scene: %s" % full_path)
+		console.print_info("Loading scene: %s" % _e(full_path))
 	else:
-		console.print_error("Failed to load scene: %s (error %d)" % [full_path, err])
+		console.print_error("Failed to load scene: %s (error %d)" % [_e(full_path), err])
 
 
 func list_autoloads() -> void:
@@ -621,7 +629,7 @@ func list_autoloads() -> void:
 			continue
 		var script : Script = child.get_script()
 		var script_path := script.resource_path if script else "built-in"
-		console.print_line("  [color=#00ff00]%s[/color] [color=#5555ff](%s)[/color] %s" % [child.name, child.get_class(), script_path])
+		console.print_line("  [color=#00ff00]%s[/color] [color=#5555ff](%s)[/color] %s" % [_e(child.name), child.get_class(), _e(script_path)])
 
 
 func scene_info() -> void:
@@ -630,8 +638,8 @@ func scene_info() -> void:
 		console.print_warning("No current scene.")
 		return
 	console.print_line("[color=#ffff55]CURRENT SCENE[/color]")
-	console.print_line("  Name:     %s" % scene.name)
-	console.print_line("  Path:     %s" % scene.scene_file_path)
+	console.print_line("  Name:     %s" % _e(scene.name))
+	console.print_line("  Path:     %s" % _e(scene.scene_file_path))
 	console.print_line("  Type:     %s" % scene.get_class())
 	var count := _count_nodes(scene)
 	console.print_line("  Nodes:    %d" % count)
@@ -670,7 +678,7 @@ func _show_command_help(command_name: String) -> void:
 				args_str += " [color=#666666][%s][/color]" % cmd.arguments[i]
 		console.rich_label.append_text("[color=#ffff55]HELP: %s[/color]\n\n  [color=#00ff00]%s[/color]%s\n\n  %s\n\n" % [display, display, args_str, cmd.description])
 	else:
-		console.print_error("help: no entry for '%s'. Try [url=cmd://commands][color=#00ff00]commands[/color][/url] to list all commands." % command_name.replace("_", " "))
+		console.print_error("help: no entry for '%s'. Try [url=cmd://commands][color=#00ff00]commands[/color][/url] to list all commands." % _e(command_name.replace("_", " ")))
 
 
 func _build_help_pages() -> Dictionary:

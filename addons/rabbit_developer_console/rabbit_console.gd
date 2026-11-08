@@ -257,7 +257,100 @@ func _on_console_link_clicked(meta : Variant) -> void:
 		var command_name := meta_str.substr("cmd://".length())
 		_on_text_entered("help " + command_name.replace("_", " "))
 		return
-	OS.shell_open(meta_str)
+	# Console output can carry game- or network-supplied text, so a link is never handed to the
+	# OS unless it is a plain web address: file://, custom schemes and bare paths could launch
+	# local programs through OS.shell_open().
+	if is_safe_external_url(meta_str):
+		_open_external_url(meta_str)
+	else:
+		print_warning("refused to open link '%s': only http:// and https:// links can be opened" % escape_bbcode(meta_str))
+
+
+## Overridable seam so tests can observe which links would reach the OS.
+func _open_external_url(url : String) -> void:
+	OS.shell_open(url)
+
+
+## True if [param url] is an absolute http:// or https:// URL with a plausible host, so it is safe
+## to pass to OS.shell_open(). Rejects every other scheme (file:, javascript:, custom protocol
+## handlers...), bare paths, whitespace or control characters, backslashes, quotes and
+## user-info ("http://good.com@evil.com") that could disguise the real destination.
+static func is_safe_external_url(url : String) -> bool:
+	var rest := ""
+	var lower := url.to_lower()
+	if lower.begins_with("https://"):
+		rest = url.substr("https://".length())
+	elif lower.begins_with("http://"):
+		rest = url.substr("http://".length())
+	else:
+		return false
+	for c in url:
+		var code := c.unicode_at(0)
+		if code <= 0x20 or code == 0x7f or c in ["\\", "\"", "'", "<", ">", "`", "{", "}", "|", "^"]:
+			return false
+	var end := rest.length()
+	for sep in ["/", "?", "#"]:
+		var at := rest.find(sep)
+		if at != -1 and at < end:
+			end = at
+	var authority := rest.substr(0, end)
+	if authority.is_empty() or authority.contains("@"):
+		return false
+	var host := authority
+	var port := ""
+	var has_port := false
+	if authority.begins_with("["): # IPv6 literal, e.g. http://[::1]:8080/
+		var close := authority.find("]")
+		if close == -1:
+			return false
+		host = authority.substr(1, close - 1)
+		var after := authority.substr(close + 1)
+		if not after.is_empty():
+			if not after.begins_with(":"):
+				return false
+			has_port = true
+			port = after.substr(1)
+		if host.is_empty():
+			return false
+		for c in host:
+			if not (c == ":" or c == "." or c.is_valid_hex_number()):
+				return false
+	else:
+		var colon := authority.find(":")
+		if colon != -1:
+			has_port = true
+			host = authority.substr(0, colon)
+			port = authority.substr(colon + 1)
+		if host.is_empty() or host.begins_with(".") or host.begins_with("-") or host.contains(".."):
+			return false
+		for c in host:
+			# Letters, digits, '-' and '.', plus non-ASCII for internationalised domain names.
+			if not (c.unicode_at(0) > 0x7f or c == "-" or c == "." or c.is_valid_int() or (c.to_lower() != c.to_upper())):
+				return false
+	if has_port:
+		# is_valid_int() accepts a sign, so also require plain digits.
+		if not port.is_valid_int() or not port.lstrip("0123456789").is_empty():
+			return false
+		if port.to_int() < 1 or port.to_int() > 65535:
+			return false
+	return true
+
+
+## Escapes BBCode so [param text] is shown literally by the console. Use it for any text that
+## didn't come from your own code (player names, chat, network messages, file contents) before
+## passing it to print_line(), print_info(), print_warning() or print_error(), which all render
+## BBCode: unescaped, such text can restyle the console or add clickable [url] links.
+static func escape_bbcode(text : String) -> String:
+	var parts := text.split("[")
+	for i in range(parts.size()):
+		parts[i] = parts[i].replace("]", "[rb]")
+	return "[lb]".join(parts)
+
+
+## Prints [param text] literally, with any BBCode in it escaped. The safe choice for untrusted
+## text such as player names, chat or network messages.
+func print_plain(text : Variant, print_godot := false) -> void:
+	print_line(escape_bbcode(str(text)), print_godot)
 
 
 var _hover_highlighted_node : CanvasItem = null
@@ -274,7 +367,7 @@ func _on_meta_hover_started(meta : Variant) -> void:
 		return
 	if not meta_str.begins_with("node://"):
 		return
-	var node_path := meta_str.substr("node://".length())
+	var node_path := meta_str.substr("node://".length()).uri_decode()
 	var scene_root := get_tree().current_scene
 	if not scene_root:
 		return
@@ -906,7 +999,7 @@ func _on_text_entered(new_text : String) -> void:
 
 	if not new_text.strip_edges().is_empty():
 		add_input_history(new_text)
-		print_line(_get_prompt() + " " + new_text)
+		print_line(_get_prompt() + " " + escape_bbcode(new_text))
 		_error_occurred = false
 		var text_split := parse_line_input(new_text)
 		var match_result := _match_command_from_tokens(text_split)
@@ -954,7 +1047,7 @@ func _on_text_entered(new_text : String) -> void:
 			var first_token := text_split[0]
 			var shorthand_prefix : String = match_result[2]
 			console_unknown_command.emit(first_token)
-			print_error("%s: command not found" % first_token)
+			print_error("%s: command not found" % escape_bbcode(first_token))
 			if shorthand_prefix != "":
 				# Shorthand was recognized but didn't resolve — list matching commands
 				var matches : PackedStringArray = []
