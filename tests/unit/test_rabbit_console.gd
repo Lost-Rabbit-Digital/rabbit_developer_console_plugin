@@ -369,3 +369,25 @@ func test_keys_typed_into_console_do_not_reach_game_unhandled_input() -> void:
 	console.toggle_console()
 	get_tree().root.push_input(_key(KEY_F5, true))
 	assert_int(game.events.size()).is_equal(1)
+
+
+# ---- Dropdown hints ----
+
+func test_dropdown_completes_parameters_of_multi_word_commands() -> void:
+	var console := _make_console()
+	var rec := Recorder.new()
+	console.add_command("spawn_enemy", rec.record, ["kind"], 1)
+	console.add_command_autocomplete_list("spawn_enemy", PackedStringArray(["goblin", "golem", "slime"]))
+	assert_array(Array(console._get_dropdown_matches("spawn enemy go"))).is_equal(["spawn enemy goblin", "spawn enemy golem"])
+	assert_array(Array(console._get_dropdown_matches("spawn enemy "))).is_equal(["spawn enemy goblin", "spawn enemy golem", "spawn enemy slime"])
+	assert_array(Array(console._get_dropdown_matches("spawn_enemy sl"))).is_equal(["spawn_enemy slime"])
+
+
+func test_dropdown_still_completes_single_word_command_parameters() -> void:
+	var console := _make_console()
+	assert_array(Array(console._get_dropdown_matches("vsync ad"))).is_equal(["vsync adaptive"])
+
+
+func test_dropdown_matches_partly_typed_multi_word_command_names() -> void:
+	var console := _make_console()
+	assert_array(Array(console._get_dropdown_matches("echo wa"))).contains(["echo_warning"])

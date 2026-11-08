@@ -1179,28 +1179,46 @@ func _on_line_edit_text_changed(new_text : String) -> void:
 func _get_dropdown_matches(text : String) -> Array[String]:
 	var matches : Array[String] = []
 	if " " in text:
+		# Commands can span several words ("load scene"), so find the longest command the typed
+		# words name, then complete the parameter that follows it.
 		var split := parse_line_input(text)
-		if split.size() >= 1:
-			var command := split[0]
-			var param_input := split[split.size() - 1] if split.size() >= 2 else ""
-			if command_parameters.has(command):
-				for param in command_parameters[command]:
-					if param_input.is_empty() or param.begins_with(param_input) or param.contains(param_input):
-						matches.append(command + " " + param)
+		if split.is_empty():
+			return matches
+		var cmd_match := _match_command_from_tokens(split)
+		var command : String = cmd_match[0]
+		var consumed : int = cmd_match[1]
+		if command != "" and command_parameters.has(command) and (consumed < split.size() or text.ends_with(" ")):
+			var param_input := split[consumed] if consumed < split.size() else ""
+			# Keep the command words the way they were typed ("load scene", "cd", "load_scene").
+			var typed_command := " ".join(split.slice(0, consumed))
+			for param in command_parameters[command]:
+				if param_input.is_empty() or param.begins_with(param_input) or param.contains(param_input):
+					matches.append(typed_command + " " + param)
+			return matches
+		# Still typing a multi-word command name ("load sc", or "echo wa" where "echo" is itself a
+		# command): match it like "load_sc".
+		matches = _match_command_names("_".join(split))
 	else:
-		var prefix_matches : Array[String] = []
-		var contains_matches : Array[String] = []
-		var sorted_names : Array[String] = []
-		for cmd_name in console_commands:
-			if not console_commands[cmd_name].hidden:
-				sorted_names.append(cmd_name)
-		sorted_names.sort()
-		for cmd_name in sorted_names:
-			if cmd_name.begins_with(text):
-				prefix_matches.append(cmd_name)
-			elif cmd_name.contains(text):
-				contains_matches.append(cmd_name)
-		matches.assign(prefix_matches + contains_matches)
+		matches = _match_command_names(text)
+	return matches
+
+
+## Visible command names that start with [param partial], then those that merely contain it.
+func _match_command_names(partial : String) -> Array[String]:
+	var prefix_matches : Array[String] = []
+	var contains_matches : Array[String] = []
+	var sorted_names : Array[String] = []
+	for cmd_name in console_commands:
+		if not console_commands[cmd_name].hidden:
+			sorted_names.append(cmd_name)
+	sorted_names.sort()
+	for cmd_name in sorted_names:
+		if cmd_name.begins_with(partial):
+			prefix_matches.append(cmd_name)
+		elif cmd_name.contains(partial):
+			contains_matches.append(cmd_name)
+	var matches : Array[String] = []
+	matches.assign(prefix_matches + contains_matches)
 	return matches
 
 
