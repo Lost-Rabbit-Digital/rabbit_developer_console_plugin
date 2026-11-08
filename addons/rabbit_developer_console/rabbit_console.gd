@@ -9,6 +9,14 @@ var enable_on_release_build := false : set = set_enable_on_release_build
 ## locked out of a release build.
 var history_file_path := "user://console_history.txt"
 var pause_enabled := false
+## Keep the game from reacting to keys typed into the console (on by default). While the console
+## is open, every input action is released each frame, so code polling Input.is_action_pressed(),
+## get_axis() or get_vector() reads nothing, and keyboard and joypad events that the console's
+## controls didn't use are consumed before any _unhandled_input(), _unhandled_key_input() or
+## _shortcut_input() in the game sees them. It cannot stop other nodes' _input() callbacks or raw
+## polling such as Input.is_key_pressed(); gate those on Console.is_visible() or the
+## console_opened / console_closed signals.
+var block_game_input := true
 var font_size := -1:
 	set(value):
 		font_size = value
@@ -560,6 +568,10 @@ func _update_font_size():
 
 
 func _exit_tree() -> void:
+	if is_instance_valid(_input_shield):
+		# queue_free, not free: on quit the root is busy removing its children.
+		_input_shield.queue_free()
+	_input_shield = null
 	if _release_locked:
 		return
 	var console_history_file := FileAccess.open(history_file_path, FileAccess.WRITE)
@@ -577,6 +589,73 @@ func _ready() -> void:
 	_builtin_commands = BuiltinCommands.new(self)
 	_builtin_commands.register_all()
 	_builtin_command_names = PackedStringArray(console_commands.keys())
+	# Deferred: the root is still busy adding its children while autoloads run _ready().
+	_attach_input_shield.call_deferred()
+
+
+## Blocks game input while the console is open (see block_game_input). It lives as a child of the
+## root viewport rather than of the console because Godot sends _unhandled_input() and friends to
+## nodes in reverse tree order: as the root's last child it gets the event before the game does.
+## It also processes before everything else so held actions are released before game code polls.
+class _InputShield extends Node:
+	var console : Node
+
+	func _init(in_console : Node) -> void:
+		console = in_console
+		name = "ConsoleInputShield"
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		process_priority = -1_000_000
+		process_physics_priority = -1_000_000
+
+	func _is_blocking() -> bool:
+		return is_instance_valid(console) and console.block_game_input and console.control.visible
+
+	func _process(_delta : float) -> void:
+		if _is_blocking():
+			console.release_game_actions()
+
+	func _physics_process(_delta : float) -> void:
+		if _is_blocking():
+			console.release_game_actions()
+
+	func _consume(event : InputEvent) -> void:
+		if _is_blocking() and (event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion):
+			get_viewport().set_input_as_handled()
+
+	func _shortcut_input(event : InputEvent) -> void:
+		_consume(event)
+
+	func _unhandled_key_input(event : InputEvent) -> void:
+		_consume(event)
+
+	func _unhandled_input(event : InputEvent) -> void:
+		_consume(event)
+
+
+var _input_shield : Node
+
+
+## Releases every input action that is currently pressed, so the game stops seeing keys that were
+## held or typed while the console is open. Called on opening and every frame while open when
+## block_game_input is on.
+func release_game_actions() -> void:
+	for action in InputMap.get_actions():
+		if Input.is_action_pressed(action):
+			Input.action_release(action)
+
+
+## Adds the input shield to the root viewport, or moves it back to the end of the root's children
+## in case the game added nodes (such as a new current scene) after it.
+func _attach_input_shield() -> void:
+	if not is_inside_tree():
+		return
+	var root := get_tree().root
+	if not is_instance_valid(_input_shield):
+		_input_shield = _InputShield.new(self)
+	if _input_shield.get_parent() == null:
+		root.add_child(_input_shield)
+	elif _input_shield.get_parent() == root and _input_shield.get_index() != root.get_child_count() - 1:
+		root.move_child(_input_shield, -1)
 
 
 ## Release builds start locked unless the game opted in, through the
@@ -850,6 +929,14 @@ func toggle_console() -> void:
 		get_tree().paused = was_paused_already || pause_enabled
 		_apply_position()
 		line_edit.grab_focus()
+		if block_game_input:
+			if is_instance_valid(_input_shield) and _input_shield.get_parent() != null:
+				_attach_input_shield()
+			else:
+				# Deferred in case the game opens the console while the root is still busy
+				# setting up its children (for example from a scene's _ready()).
+				_attach_input_shield.call_deferred()
+			release_game_actions()
 		console_opened.emit()
 	else:
 		scroll_to_bottom()

@@ -18,12 +18,18 @@ class FakeBuildConsole extends "res://addons/rabbit_developer_console/rabbit_con
 		opened_urls.append(url)
 
 
+const TEST_ACTION := &"test_console_move_forward"
+
+
 func before_test() -> void:
 	DirAccess.remove_absolute(HISTORY)
 
 
 func after_test() -> void:
 	DirAccess.remove_absolute(HISTORY)
+	if InputMap.has_action(TEST_ACTION):
+		Input.action_release(TEST_ACTION)
+		InputMap.erase_action(TEST_ACTION)
 
 
 func _make_console(release := false, opt_in := false) -> Node:
@@ -274,3 +280,92 @@ func test_entered_text_is_echoed_literally() -> void:
 	var shown: String = console.rich_label.get_parsed_text()
 	assert_str(shown).contains("[url=file:///C:/evil.exe]x[/url]")
 	assert_str(shown).contains("command not found")
+
+
+# ---- Game input while the console is open ----
+
+func _add_test_action() -> void:
+	InputMap.add_action(TEST_ACTION)
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_W
+	InputMap.action_add_event(TEST_ACTION, key)
+
+
+func test_opening_console_releases_held_actions() -> void:
+	_add_test_action()
+	var console := _make_console()
+	Input.action_press(TEST_ACTION)
+	console.toggle_console()
+	assert_bool(Input.is_action_pressed(TEST_ACTION)).is_false()
+
+
+func test_actions_pressed_while_open_are_released_before_game_polls() -> void:
+	_add_test_action()
+	var console := _make_console()
+	await await_idle_frame() # the input shield is attached deferred
+	console.toggle_console()
+	Input.action_press(TEST_ACTION) # what Input does when W goes down while typing
+	console._input_shield._physics_process(0.0)
+	assert_bool(Input.is_action_pressed(TEST_ACTION)).is_false()
+	Input.action_press(TEST_ACTION)
+	console._input_shield._process(0.0)
+	assert_bool(Input.is_action_pressed(TEST_ACTION)).is_false()
+
+
+func test_input_shield_runs_before_game_nodes() -> void:
+	var console := _make_console()
+	await await_idle_frame()
+	assert_object(console._input_shield).is_not_null()
+	assert_object(console._input_shield.get_parent()).is_same(get_tree().root)
+	assert_int(console._input_shield.process_priority).is_less(0)
+	assert_int(console._input_shield.process_physics_priority).is_less(0)
+
+
+func test_actions_are_left_alone_when_blocking_is_off() -> void:
+	_add_test_action()
+	var console := _make_console()
+	await await_idle_frame()
+	console.block_game_input = false
+	Input.action_press(TEST_ACTION)
+	console.toggle_console()
+	console._input_shield._process(0.0)
+	assert_bool(Input.is_action_pressed(TEST_ACTION)).is_true()
+
+
+func test_actions_are_left_alone_when_console_is_closed() -> void:
+	_add_test_action()
+	var console := _make_console()
+	await await_idle_frame()
+	Input.action_press(TEST_ACTION)
+	console._input_shield._process(0.0)
+	assert_bool(Input.is_action_pressed(TEST_ACTION)).is_true()
+
+
+class UnhandledRecorder extends Node:
+	var events: Array = []
+	func _unhandled_input(event: InputEvent) -> void:
+		events.append(event)
+
+
+func _key(keycode: Key, pressed: bool) -> InputEventKey:
+	var ev := InputEventKey.new()
+	ev.keycode = keycode
+	ev.physical_keycode = keycode
+	ev.pressed = pressed
+	return ev
+
+
+func test_keys_typed_into_console_do_not_reach_game_unhandled_input() -> void:
+	var console := _make_console()
+	var game := UnhandledRecorder.new()
+	add_child(auto_free(game))
+	await await_idle_frame()
+	console.toggle_console()
+	# LineEdit takes key presses but ignores releases and keys it has no use for (F5, ...);
+	# without the shield those would reach the game's _unhandled_input().
+	get_tree().root.push_input(_key(KEY_W, false))
+	get_tree().root.push_input(_key(KEY_F5, true))
+	assert_array(game.events).is_empty()
+	console.toggle_console()
+	get_tree().root.push_input(_key(KEY_F5, true))
+	assert_int(game.events.size()).is_equal(1)
