@@ -9,6 +9,14 @@ var enable_on_release_build := false : set = set_enable_on_release_build
 ## locked out of a release build.
 var history_file_path := "user://console_history.txt"
 var pause_enabled := false
+## Keep the game from reacting to keys typed into the console (on by default). While the console
+## is open, every input action is released each frame, so code polling Input.is_action_pressed(),
+## get_axis() or get_vector() reads nothing, and keyboard and joypad events that the console's
+## controls didn't use are consumed before any _unhandled_input(), _unhandled_key_input() or
+## _shortcut_input() in the game sees them. It cannot stop other nodes' _input() callbacks or raw
+## polling such as Input.is_key_pressed(); gate those on Console.is_visible() or the
+## console_opened / console_closed signals.
+var block_game_input := true
 var font_size := -1:
 	set(value):
 		font_size = value
@@ -257,7 +265,100 @@ func _on_console_link_clicked(meta : Variant) -> void:
 		var command_name := meta_str.substr("cmd://".length())
 		_on_text_entered("help " + command_name.replace("_", " "))
 		return
-	OS.shell_open(meta_str)
+	# Console output can carry game- or network-supplied text, so a link is never handed to the
+	# OS unless it is a plain web address: file://, custom schemes and bare paths could launch
+	# local programs through OS.shell_open().
+	if is_safe_external_url(meta_str):
+		_open_external_url(meta_str)
+	else:
+		print_warning("refused to open link '%s': only http:// and https:// links can be opened" % escape_bbcode(meta_str))
+
+
+## Overridable seam so tests can observe which links would reach the OS.
+func _open_external_url(url : String) -> void:
+	OS.shell_open(url)
+
+
+## True if [param url] is an absolute http:// or https:// URL with a plausible host, so it is safe
+## to pass to OS.shell_open(). Rejects every other scheme (file:, javascript:, custom protocol
+## handlers...), bare paths, whitespace or control characters, backslashes, quotes and
+## user-info ("http://good.com@evil.com") that could disguise the real destination.
+static func is_safe_external_url(url : String) -> bool:
+	var rest := ""
+	var lower := url.to_lower()
+	if lower.begins_with("https://"):
+		rest = url.substr("https://".length())
+	elif lower.begins_with("http://"):
+		rest = url.substr("http://".length())
+	else:
+		return false
+	for c in url:
+		var code := c.unicode_at(0)
+		if code <= 0x20 or code == 0x7f or c in ["\\", "\"", "'", "<", ">", "`", "{", "}", "|", "^"]:
+			return false
+	var end := rest.length()
+	for sep in ["/", "?", "#"]:
+		var at := rest.find(sep)
+		if at != -1 and at < end:
+			end = at
+	var authority := rest.substr(0, end)
+	if authority.is_empty() or authority.contains("@"):
+		return false
+	var host := authority
+	var port := ""
+	var has_port := false
+	if authority.begins_with("["): # IPv6 literal, e.g. http://[::1]:8080/
+		var close := authority.find("]")
+		if close == -1:
+			return false
+		host = authority.substr(1, close - 1)
+		var after := authority.substr(close + 1)
+		if not after.is_empty():
+			if not after.begins_with(":"):
+				return false
+			has_port = true
+			port = after.substr(1)
+		if host.is_empty():
+			return false
+		for c in host:
+			if not (c == ":" or c == "." or c.is_valid_hex_number()):
+				return false
+	else:
+		var colon := authority.find(":")
+		if colon != -1:
+			has_port = true
+			host = authority.substr(0, colon)
+			port = authority.substr(colon + 1)
+		if host.is_empty() or host.begins_with(".") or host.begins_with("-") or host.contains(".."):
+			return false
+		for c in host:
+			# Letters, digits, '-' and '.', plus non-ASCII for internationalised domain names.
+			if not (c.unicode_at(0) > 0x7f or c == "-" or c == "." or c.is_valid_int() or (c.to_lower() != c.to_upper())):
+				return false
+	if has_port:
+		# is_valid_int() accepts a sign, so also require plain digits.
+		if not port.is_valid_int() or not port.lstrip("0123456789").is_empty():
+			return false
+		if port.to_int() < 1 or port.to_int() > 65535:
+			return false
+	return true
+
+
+## Escapes BBCode so [param text] is shown literally by the console. Use it for any text that
+## didn't come from your own code (player names, chat, network messages, file contents) before
+## passing it to print_line(), print_info(), print_warning() or print_error(), which all render
+## BBCode: unescaped, such text can restyle the console or add clickable [url] links.
+static func escape_bbcode(text : String) -> String:
+	var parts := text.split("[")
+	for i in range(parts.size()):
+		parts[i] = parts[i].replace("]", "[rb]")
+	return "[lb]".join(parts)
+
+
+## Prints [param text] literally, with any BBCode in it escaped. The safe choice for untrusted
+## text such as player names, chat or network messages.
+func print_plain(text : Variant, print_godot := false) -> void:
+	print_line(escape_bbcode(str(text)), print_godot)
 
 
 var _hover_highlighted_node : CanvasItem = null
@@ -274,7 +375,7 @@ func _on_meta_hover_started(meta : Variant) -> void:
 		return
 	if not meta_str.begins_with("node://"):
 		return
-	var node_path := meta_str.substr("node://".length())
+	var node_path := meta_str.substr("node://".length()).uri_decode()
 	var scene_root := get_tree().current_scene
 	if not scene_root:
 		return
@@ -467,6 +568,10 @@ func _update_font_size():
 
 
 func _exit_tree() -> void:
+	if is_instance_valid(_input_shield):
+		# queue_free, not free: on quit the root is busy removing its children.
+		_input_shield.queue_free()
+	_input_shield = null
 	if _release_locked:
 		return
 	var console_history_file := FileAccess.open(history_file_path, FileAccess.WRITE)
@@ -484,6 +589,73 @@ func _ready() -> void:
 	_builtin_commands = BuiltinCommands.new(self)
 	_builtin_commands.register_all()
 	_builtin_command_names = PackedStringArray(console_commands.keys())
+	# Deferred: the root is still busy adding its children while autoloads run _ready().
+	_attach_input_shield.call_deferred()
+
+
+## Blocks game input while the console is open (see block_game_input). It lives as a child of the
+## root viewport rather than of the console because Godot sends _unhandled_input() and friends to
+## nodes in reverse tree order: as the root's last child it gets the event before the game does.
+## It also processes before everything else so held actions are released before game code polls.
+class _InputShield extends Node:
+	var console : Node
+
+	func _init(in_console : Node) -> void:
+		console = in_console
+		name = "ConsoleInputShield"
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		process_priority = -1_000_000
+		process_physics_priority = -1_000_000
+
+	func _is_blocking() -> bool:
+		return is_instance_valid(console) and console.block_game_input and console.control.visible
+
+	func _process(_delta : float) -> void:
+		if _is_blocking():
+			console.release_game_actions()
+
+	func _physics_process(_delta : float) -> void:
+		if _is_blocking():
+			console.release_game_actions()
+
+	func _consume(event : InputEvent) -> void:
+		if _is_blocking() and (event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion):
+			get_viewport().set_input_as_handled()
+
+	func _shortcut_input(event : InputEvent) -> void:
+		_consume(event)
+
+	func _unhandled_key_input(event : InputEvent) -> void:
+		_consume(event)
+
+	func _unhandled_input(event : InputEvent) -> void:
+		_consume(event)
+
+
+var _input_shield : Node
+
+
+## Releases every input action that is currently pressed, so the game stops seeing keys that were
+## held or typed while the console is open. Called on opening and every frame while open when
+## block_game_input is on.
+func release_game_actions() -> void:
+	for action in InputMap.get_actions():
+		if Input.is_action_pressed(action):
+			Input.action_release(action)
+
+
+## Adds the input shield to the root viewport, or moves it back to the end of the root's children
+## in case the game added nodes (such as a new current scene) after it.
+func _attach_input_shield() -> void:
+	if not is_inside_tree():
+		return
+	var root := get_tree().root
+	if not is_instance_valid(_input_shield):
+		_input_shield = _InputShield.new(self)
+	if _input_shield.get_parent() == null:
+		root.add_child(_input_shield)
+	elif _input_shield.get_parent() == root and _input_shield.get_index() != root.get_child_count() - 1:
+		root.move_child(_input_shield, -1)
 
 
 ## Release builds start locked unless the game opted in, through the
@@ -757,6 +929,14 @@ func toggle_console() -> void:
 		get_tree().paused = was_paused_already || pause_enabled
 		_apply_position()
 		line_edit.grab_focus()
+		if block_game_input:
+			if is_instance_valid(_input_shield) and _input_shield.get_parent() != null:
+				_attach_input_shield()
+			else:
+				# Deferred in case the game opens the console while the root is still busy
+				# setting up its children (for example from a scene's _ready()).
+				_attach_input_shield.call_deferred()
+			release_game_actions()
 		console_opened.emit()
 	else:
 		scroll_to_bottom()
@@ -893,6 +1073,19 @@ func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
 	return [best_match, best_count, ""]
 
 
+## Returns [param text] with its first [param count] whitespace-separated words removed, and the
+## remainder otherwise untouched (no quote or escape processing).
+func _raw_after_tokens(text : String, count : int) -> String:
+	var i := 0
+	var n := text.length()
+	for _t in range(count):
+		while i < n and (text[i] == " " or text[i] == "\t"):
+			i += 1
+		while i < n and text[i] != " " and text[i] != "\t":
+			i += 1
+	return text.substr(i).strip_edges()
+
+
 func _on_text_entered(new_text : String) -> void:
 	scroll_to_bottom()
 	reset_autocomplete()
@@ -906,7 +1099,7 @@ func _on_text_entered(new_text : String) -> void:
 
 	if not new_text.strip_edges().is_empty():
 		add_input_history(new_text)
-		print_line(_get_prompt() + " " + new_text)
+		print_line(_get_prompt() + " " + escape_bbcode(new_text))
 		_error_occurred = false
 		var text_split := parse_line_input(new_text)
 		var match_result := _match_command_from_tokens(text_split)
@@ -918,11 +1111,10 @@ func _on_text_entered(new_text : String) -> void:
 			var console_command : ConsoleCommand = console_commands[text_command]
 
 			# calc is a especial command that needs special treatment
+			# It gets the rest of the line exactly as typed: re-joining the parsed words would
+			# drop spaces ("1 2" -> "12") and strip quotes and backslashes from string literals.
 			if (text_command.match("calc")):
-				var expression := ""
-				for word in arguments:
-					expression += word
-				console_command.function.callv([expression])
+				console_command.function.callv([_raw_after_tokens(new_text, tokens_consumed)])
 				if _error_occurred:
 					line_edit.text = new_text
 					line_edit.caret_column = new_text.length()
@@ -954,7 +1146,7 @@ func _on_text_entered(new_text : String) -> void:
 			var first_token := text_split[0]
 			var shorthand_prefix : String = match_result[2]
 			console_unknown_command.emit(first_token)
-			print_error("%s: command not found" % first_token)
+			print_error("%s: command not found" % escape_bbcode(first_token))
 			if shorthand_prefix != "":
 				# Shorthand was recognized but didn't resolve — list matching commands
 				var matches : PackedStringArray = []
@@ -987,28 +1179,46 @@ func _on_line_edit_text_changed(new_text : String) -> void:
 func _get_dropdown_matches(text : String) -> Array[String]:
 	var matches : Array[String] = []
 	if " " in text:
+		# Commands can span several words ("load scene"), so find the longest command the typed
+		# words name, then complete the parameter that follows it.
 		var split := parse_line_input(text)
-		if split.size() >= 1:
-			var command := split[0]
-			var param_input := split[split.size() - 1] if split.size() >= 2 else ""
-			if command_parameters.has(command):
-				for param in command_parameters[command]:
-					if param_input.is_empty() or param.begins_with(param_input) or param.contains(param_input):
-						matches.append(command + " " + param)
+		if split.is_empty():
+			return matches
+		var cmd_match := _match_command_from_tokens(split)
+		var command : String = cmd_match[0]
+		var consumed : int = cmd_match[1]
+		if command != "" and command_parameters.has(command) and (consumed < split.size() or text.ends_with(" ")):
+			var param_input := split[consumed] if consumed < split.size() else ""
+			# Keep the command words the way they were typed ("load scene", "cd", "load_scene").
+			var typed_command := " ".join(split.slice(0, consumed))
+			for param in command_parameters[command]:
+				if param_input.is_empty() or param.begins_with(param_input) or param.contains(param_input):
+					matches.append(typed_command + " " + param)
+			return matches
+		# Still typing a multi-word command name ("load sc", or "echo wa" where "echo" is itself a
+		# command): match it like "load_sc".
+		matches = _match_command_names("_".join(split))
 	else:
-		var prefix_matches : Array[String] = []
-		var contains_matches : Array[String] = []
-		var sorted_names : Array[String] = []
-		for cmd_name in console_commands:
-			if not console_commands[cmd_name].hidden:
-				sorted_names.append(cmd_name)
-		sorted_names.sort()
-		for cmd_name in sorted_names:
-			if cmd_name.begins_with(text):
-				prefix_matches.append(cmd_name)
-			elif cmd_name.contains(text):
-				contains_matches.append(cmd_name)
-		matches.assign(prefix_matches + contains_matches)
+		matches = _match_command_names(text)
+	return matches
+
+
+## Visible command names that start with [param partial], then those that merely contain it.
+func _match_command_names(partial : String) -> Array[String]:
+	var prefix_matches : Array[String] = []
+	var contains_matches : Array[String] = []
+	var sorted_names : Array[String] = []
+	for cmd_name in console_commands:
+		if not console_commands[cmd_name].hidden:
+			sorted_names.append(cmd_name)
+	sorted_names.sort()
+	for cmd_name in sorted_names:
+		if cmd_name.begins_with(partial):
+			prefix_matches.append(cmd_name)
+		elif cmd_name.contains(partial):
+			contains_matches.append(cmd_name)
+	var matches : Array[String] = []
+	matches.assign(prefix_matches + contains_matches)
 	return matches
 
 

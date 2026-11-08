@@ -60,3 +60,60 @@ func test_exec_rejects_paths_outside_user_dir() -> void:
 	var console := _make_console()
 	console._on_text_entered("exec ../../secrets")
 	assert_str(console.rich_label.get_parsed_text()).contains("must be inside user://")
+
+
+# ---- calc ----
+
+func _calc(console: Node, expression: String) -> String:
+	console.rich_label.clear()
+	console._on_text_entered("calc " + expression)
+	var lines: PackedStringArray = console.rich_label.get_parsed_text().strip_edges().split("\n")
+	return lines[lines.size() - 1]
+
+
+func test_calc_divides_like_a_calculator() -> void:
+	var console := _make_console()
+	assert_str(_calc(console, "10 / 4")).is_equal("2.5")
+	assert_str(_calc(console, "10/4")).is_equal("2.5")
+	assert_str(_calc(console, "(1 + 2) / 2")).is_equal("1.5")
+	assert_str(_calc(console, "1 / 3")).starts_with("0.333")
+
+
+func test_calc_keeps_whole_number_results_tidy() -> void:
+	var console := _make_console()
+	assert_str(_calc(console, "2 + 2")).is_equal("4")
+	assert_str(_calc(console, "8 / 2")).is_equal("4")
+	assert_str(_calc(console, "sqrt(144)")).is_equal("12")
+	assert_str(_calc(console, "2.0 + 2")).is_equal("4.0")
+	assert_str(_calc(console, "int(10 / 4)")).is_equal("2")
+
+
+func test_calc_uses_the_expression_as_typed() -> void:
+	var console := _make_console()
+	# The words used to be re-joined without spaces after quote processing, so string literals
+	# lost their quotes and spaces ("a b+c", a parse error).
+	assert_str(_calc(console, "\"a b\" + \"c\"")).is_equal("a bc")
+	assert_str(_calc(console, "1 - -1")).is_equal("2")
+
+
+func test_calc_integer_operators_still_work() -> void:
+	var console := _make_console()
+	assert_str(_calc(console, "7 % 3")).is_equal("1")
+	assert_str(_calc(console, "1 << 4")).is_equal("16")
+	assert_str(_calc(console, "0xFF + 1")).is_equal("256")
+	assert_str(_calc(console, "6 & 3")).is_equal("2")
+
+
+func test_calc_reports_errors() -> void:
+	var console := _make_console()
+	assert_str(_calc(console, "1 / 0")).contains("error")
+	assert_str(_calc(console, "2 +")).contains("error")
+
+
+func test_calc_promotes_only_integer_literals() -> void:
+	var console := _make_console()
+	var builtins = console._builtin_commands
+	assert_str(builtins._promote_int_literals("10 / 4")).is_equal("10.0 / 4.0")
+	assert_str(builtins._promote_int_literals("1.5 + 2e3 + .5")).is_equal("1.5 + 2e3 + .5")
+	assert_str(builtins._promote_int_literals("Vector2(1, 2).x + atan2(1, 0x10)")).is_equal("Vector2(1.0, 2.0).x + atan2(1.0, 0x10)")
+	assert_str(builtins._promote_int_literals("\"10\" + str(4)")).is_equal("\"10\" + str(4.0)")

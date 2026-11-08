@@ -31,6 +31,8 @@ A Godot 4 in-game developer console with a Linux terminal theme. Press <kbd>~</k
 - **Fullscreen toggle** — <kbd>Ctrl</kbd>+<kbd>~</kbd> to expand the console
 - **Custom themes** — set a `.tres` theme via Project Settings (`console/theme`)
 - **Pause game** when console opens (optional)
+- **Game input blocked while typing** — held actions are released and stray keys are consumed, so WASD doesn't move the player while you type (see [Game Input While the Console Is Open](#game-input-while-the-console-is-open))
+- **Safe links** — only `http://` and `https://` links in console output can be opened
 - **Locked in release builds** by default; opt in with the `console/enable_on_release_build` project setting
 
 ---
@@ -78,7 +80,7 @@ Type `help` for a categorized list of built-in commands, or `commands_list` for 
 |---|---|
 | **General** | `quit`, `exit`, `clear`, `delete_history`, `help`, `commands`, `commands_list` |
 | **Output** | `echo`, `echo_warning`, `echo_info`, `echo_error` |
-| **Utility** | `calc <expr>`, `exec <script>` |
+| **Utility** | `calc <expr>` (`calc 10 / 4` prints `2.5`), `exec <script>` |
 | **Display** | `fullscreen`, `halfscreen`, `transparency <0-100>` |
 | **Time** | `timescale <speed>` |
 | **Scene** | `pause`, `unpause`, `restart`, `reload`, `load_scene <path>`, `list_scenes`, `scene_info` |
@@ -123,11 +125,15 @@ Console.remove_command(name: String)
 # Add autocomplete suggestions for a command's parameters
 Console.add_command_autocomplete_list(name: String, param_list: PackedStringArray)
 
-# Output helpers
+# Output helpers (these render BBCode)
 Console.print_line(text)
 Console.print_error(text)
 Console.print_warning(text)
 Console.print_info(text)
+
+# Untrusted text (player names, chat, network messages): print it literally, or escape it first
+Console.print_plain(text)
+Console.print_info("Joined: %s" % Console.escape_bbcode(player_name))
 
 # Console control
 Console.toggle_console()
@@ -155,8 +161,55 @@ Console.console_unknown_command  # Emitted when an unrecognized command is enter
 Console.enabled: bool                   # Enable/disable the console
 Console.enable_on_release_build: bool   # Allow console in release builds (takes effect immediately)
 Console.pause_enabled: bool             # Pause the game while console is open
+Console.block_game_input: bool          # Keep the game from reacting to typing (default true)
 Console.font_size: int                  # Override font size (-1 for default)
 ```
+
+### Untrusted Text and Links
+
+`print_line()`, `print_info()`, `print_warning()` and `print_error()` render BBCode, so text that
+didn't come from your own code (player names, chat, server messages, file contents) can restyle the
+console or add clickable links. Print such text with `Console.print_plain(text)`, or wrap it in
+`Console.escape_bbcode(text)` when mixing it into a formatted line. The console does the same for
+what you type and for names it prints from the scene tree.
+
+Clicking a link only opens it when it is an absolute `http://` or `https://` URL with a valid host.
+`file://`, custom schemes (`steam://`, `ms-settings:` ...), bare paths and URLs with user-info
+(`https://good.com@evil.com`) are refused with a warning instead of being passed to `OS.shell_open()`.
+
+### Game Input While the Console Is Open
+
+With `block_game_input` on (the default) the console, while open:
+
+- **releases every input action** when it opens and again every frame, before any game script runs,
+  so `Input.is_action_pressed()`, `get_axis()`, `get_vector()` and similar polling read nothing;
+- **consumes keyboard and joypad events** the console didn't use (key releases, F-keys...) before the
+  game's `_shortcut_input()`, `_unhandled_key_input()` and `_unhandled_input()` see them. Key presses
+  typed into the input line are already taken by it.
+
+Godot gives no way to hide events from every handler, so some things still see input while the
+console is open:
+
+- `_input()` callbacks in game nodes run before any GUI control gets the event;
+- raw polling such as `Input.is_key_pressed()`, `Input.is_physical_key_pressed()`,
+  `Input.is_mouse_button_pressed()` and `Input.get_joy_axis()`;
+- `Input.is_action_just_released()` reports the release of an action the console let go.
+
+Gate those on the console being open:
+
+```gdscript
+func _input(event: InputEvent) -> void:
+    if Console.is_visible():
+        return
+    ...
+
+func _ready() -> void:
+    Console.console_opened.connect(func(): set_process_input(false))
+    Console.console_closed.connect(func(): set_process_input(true))
+```
+
+Set `Console.block_game_input = false` to turn all of this off, or `Console.pause_enabled = true` to
+pause the game while the console is open.
 
 ### Generating Debug Commands with AI
 
