@@ -247,17 +247,100 @@ func commands_list() -> void:
 
 # ---- Utility ----
 
+## Evaluates [param command] like a calculator: integer literals are treated as floats so
+## "10 / 4" gives 2.5 rather than GDScript's integer division (use int() or floor() for that),
+## and a whole-number result made only from integers prints without ".0". Expressions that
+## need real integers (%, <<, >>, &, |, ^, ~) fail as floats and are evaluated as typed instead.
 func calculate(command : String) -> void:
-	var expression := Expression.new()
-	var error = expression.parse(command)
-	if error:
-		console.print_error("%s" % expression.get_error_text())
-		return
-	var result = expression.execute()
-	if not expression.has_execute_failed():
-		console.print_line(str(result))
+	var outcome := evaluate_expression(command)
+	if outcome[1] != "":
+		console.print_error("calc: %s" % _e(outcome[1]))
 	else:
-		console.print_error("%s" % expression.get_error_text())
+		console.print_line(_e(format_calc_result(outcome[0], command)))
+
+
+## Returns [result, error_text]; error_text is empty on success.
+func evaluate_expression(command : String) -> Array:
+	var promoted := _promote_int_literals(command)
+	if promoted != command:
+		var expression := Expression.new()
+		if expression.parse(promoted) == OK:
+			var result = expression.execute([], null, false)
+			# Float division by zero gives inf/nan; fall through so "1 / 0" still reports the
+			# division by zero error from the expression as typed.
+			if not expression.has_execute_failed() and not (result is float and not is_finite(result)):
+				return [result, ""]
+	var expression := Expression.new()
+	if expression.parse(command) != OK:
+		return [null, expression.get_error_text()]
+	var result = expression.execute([], null, false)
+	if expression.has_execute_failed():
+		return [null, expression.get_error_text()]
+	return [result, ""]
+
+
+## Prints a float result that is a whole number as an integer when the user typed no decimal
+## literals, so "calc 2 + 2" shows 4 and not 4.0, while "calc 2.0 + 2" keeps 4.0.
+func format_calc_result(result : Variant, command : String) -> String:
+	if result is float and is_finite(result) and result == floorf(result) and absf(result) < 9.0e15 \
+			and _promote_int_literals(command) != command and not _has_float_literal(command):
+		return str(int(result))
+	return str(result)
+
+
+## Rewrites decimal integer literals ("10") as float literals ("10.0"), leaving identifiers
+## ("vec2"), hex/binary literals, floats, exponents and string literals alone.
+func _promote_int_literals(text : String) -> String:
+	var out := ""
+	var i := 0
+	var n := text.length()
+	while i < n:
+		var c := text[i]
+		if c == "\"" or c == "'":
+			var j := i + 1
+			while j < n and text[j] != c:
+				j += 2 if text[j] == char(92) else 1
+			out += text.substr(i, j + 1 - i)
+			i = j + 1
+			continue
+		if c.is_valid_identifier() or c == "_" or (c.is_valid_int() and i > 0 and _is_word_char(text[i - 1])):
+			# Part of an identifier: copy the whole word.
+			var j := i
+			while j < n and _is_word_char(text[j]):
+				j += 1
+			out += text.substr(i, maxi(1, j - i))
+			i = maxi(i + 1, j)
+			continue
+		if c.is_valid_int():
+			var j := i
+			if c == "0" and i + 1 < n and text[i + 1].to_lower() in ["x", "b"]:
+				j = i + 2
+				while j < n and _is_word_char(text[j]):
+					j += 1
+				out += text.substr(i, j - i)
+				i = j
+				continue
+			while j < n and (text[j].is_valid_int() or text[j] == "_"):
+				j += 1
+			out += text.substr(i, j - i)
+			var is_float := j < n and (text[j] == "." or text[j].to_lower() == "e")
+			var after_dot := i > 0 and text[i - 1] == "."
+			if not is_float and not after_dot:
+				out += ".0"
+			i = j
+			continue
+		out += c
+		i += 1
+	return out
+
+
+func _is_word_char(c : String) -> bool:
+	return c == "_" or c.is_valid_int() or c.is_valid_identifier()
+
+
+func _has_float_literal(text : String) -> bool:
+	var regex := RegEx.create_from_string("(^|[^\\w])(\\d[\\d_]*\\.\\d|\\d[\\d_]*[eE]|\\.\\d)")
+	return regex.search(text) != null
 
 
 ## How deep exec can nest (a script that runs exec on itself would otherwise recurse until the
@@ -856,6 +939,9 @@ func _build_help_pages() -> Dictionary:
   [color=#00ff00]calc[/color] pow(2, 10)
 
 [color=#ffff55]NOTES[/color]
+  Division works like a calculator: [color=#00ff00]calc[/color] 10 / 4 prints 2.5. Use
+  int(10 / 4) or floor() for integer division. Integer-only operators
+  (%, <<, >>, &, |, ^, ~) still work on whole numbers.
   Division by zero and parse errors are reported as red error messages.
 
 """,

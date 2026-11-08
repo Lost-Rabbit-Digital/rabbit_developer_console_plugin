@@ -1073,6 +1073,19 @@ func _match_command_from_tokens(tokens : PackedStringArray) -> Array:
 	return [best_match, best_count, ""]
 
 
+## Returns [param text] with its first [param count] whitespace-separated words removed, and the
+## remainder otherwise untouched (no quote or escape processing).
+func _raw_after_tokens(text : String, count : int) -> String:
+	var i := 0
+	var n := text.length()
+	for _t in range(count):
+		while i < n and (text[i] == " " or text[i] == "\t"):
+			i += 1
+		while i < n and text[i] != " " and text[i] != "\t":
+			i += 1
+	return text.substr(i).strip_edges()
+
+
 func _on_text_entered(new_text : String) -> void:
 	scroll_to_bottom()
 	reset_autocomplete()
@@ -1098,11 +1111,10 @@ func _on_text_entered(new_text : String) -> void:
 			var console_command : ConsoleCommand = console_commands[text_command]
 
 			# calc is a especial command that needs special treatment
+			# It gets the rest of the line exactly as typed: re-joining the parsed words would
+			# drop spaces ("1 2" -> "12") and strip quotes and backslashes from string literals.
 			if (text_command.match("calc")):
-				var expression := ""
-				for word in arguments:
-					expression += word
-				console_command.function.callv([expression])
+				console_command.function.callv([_raw_after_tokens(new_text, tokens_consumed)])
 				if _error_occurred:
 					line_edit.text = new_text
 					line_edit.caret_column = new_text.length()
