@@ -31,7 +31,7 @@ A Godot 4 in-game developer console with a Linux terminal theme. Press <kbd>~</k
 - **Fullscreen toggle** — <kbd>Ctrl</kbd>+<kbd>~</kbd> to expand the console
 - **Custom themes** — set a `.tres` theme via Project Settings (`console/theme`)
 - **Pause game** when console opens (optional)
-- **Disable in release builds** (default)
+- **Locked in release builds** by default; opt in with the `console/enable_on_release_build` project setting
 
 ---
 
@@ -132,8 +132,7 @@ Console.print_info(text)
 # Console control
 Console.toggle_console()
 Console.toggle_size()
-Console.set_fullscreen()
-Console.set_halfscreen()
+Console.set_console_position(Console.ConsolePosition.FULL)  # FULL, BOTTOM, TOP, LEFT, RIGHT, corners
 Console.set_bg_transparency(value)
 Console.enable()
 Console.disable()
@@ -154,7 +153,7 @@ Console.console_unknown_command  # Emitted when an unrecognized command is enter
 
 ```gdscript
 Console.enabled: bool                   # Enable/disable the console
-Console.enable_on_release_build: bool   # Allow console in release builds
+Console.enable_on_release_build: bool   # Allow console in release builds (takes effect immediately)
 Console.pause_enabled: bool             # Pause the game while console is open
 Console.font_size: int                  # Override font size (-1 for default)
 ```
@@ -168,6 +167,21 @@ See [`GENERATE_DEBUG_COMMANDS.md`](GENERATE_DEBUG_COMMANDS.md) for a ready-to-us
 ## Custom Theme
 
 Set a custom `.tres` theme in **Project → Project Settings → Console → Theme**.
+
+---
+
+## Release Builds
+
+In an export without the debug feature the console is locked: <kbd>~</kbd> does nothing,
+`toggle_console()` keeps it closed, and the command history file is neither read nor written.
+To ship the console in release builds, either:
+
+- turn on **Project → Project Settings → Console → Enable On Release Build**
+  (`console/enable_on_release_build`), or
+- set `Console.enable_on_release_build = true` from game code (for example behind a cheat code).
+  Setting it back to `false` closes and locks the console again.
+
+`Console.enable()` / `Console.disable()` still work in any build, so the game always has the final say.
 
 ---
 

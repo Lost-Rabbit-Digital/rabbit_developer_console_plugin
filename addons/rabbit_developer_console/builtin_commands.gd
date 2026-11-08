@@ -99,7 +99,7 @@ func clear() -> void:
 func delete_history() -> void:
 	console.console_history.clear()
 	console.console_history_index = 0
-	DirAccess.remove_absolute("user://console_history.txt")
+	DirAccess.remove_absolute(console.history_file_path)
 
 
 func discord() -> void:
@@ -254,12 +254,26 @@ func calculate(command : String) -> void:
 		console.print_error("%s" % expression.get_error_text())
 
 
+## How deep exec can nest (a script that runs exec on itself would otherwise recurse until the
+## game crashes with a stack overflow).
+const MAX_EXEC_DEPTH := 8
+var _exec_depth := 0
+
+
 func exec(filename : String) -> void:
+	if filename.contains("..") or filename.is_absolute_path():
+		console.print_error("exec: scripts must be inside user:// (got '%s')" % filename)
+		return
+	if _exec_depth >= MAX_EXEC_DEPTH:
+		console.print_error("exec: nested too deep (max %d); does a script exec itself?" % MAX_EXEC_DEPTH)
+		return
 	var path := "user://%s.txt" % [filename]
 	var script := FileAccess.open(path, FileAccess.READ)
 	if (script):
+		_exec_depth += 1
 		while (!script.eof_reached()):
 			console._on_text_entered(script.get_line())
+		_exec_depth -= 1
 	else:
 		console.print_error("%s: No such file or directory" % [path])
 
@@ -572,8 +586,13 @@ func _find_files_recursive(path : String, extension : String) -> PackedStringArr
 		if dir.current_is_dir():
 			if not file_name.begins_with(".") and file_name != "addons":
 				results.append_array(_find_files_recursive(full_path, extension))
-		elif file_name.ends_with(extension):
-			results.append(full_path)
+		else:
+			# Exported builds list scenes as "<name>.tscn.remap" (the real file is converted and
+			# moved into .godot/exported), so without this 'list' and 'list_scenes' come back
+			# empty in every export. The un-remapped path is what load_scene() expects.
+			var listed := full_path.trim_suffix(".remap")
+			if listed.ends_with(extension) and not results.has(listed):
+				results.append(listed)
 		file_name = dir.get_next()
 	return results
 

@@ -14,7 +14,7 @@ config/name="Rabbit Developer Console Plugin"
 config/version="2.4.6"
 config/tags=PackedStringArray("active", "open_sourced", "plugin", "utility")
 run/main_scene="res://addons/rabbit_developer_console/demo_scenes/demo_2d.tscn"
-config/features=PackedStringArray("4.5", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="uid://dbdiskknw1asj"
 
 [autoload]
@@ -23,4 +23,4 @@ Console="*res://addons/rabbit_developer_console/rabbit_console.gd"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/console/plugin.cfg")
+enabled=PackedStringArray("res://addons/rabbit_developer_console/plugin.cfg")
