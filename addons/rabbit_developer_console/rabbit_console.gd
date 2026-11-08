@@ -1,7 +1,13 @@
 extends Node
 
 var enabled := true
+## Allow the console in release (non-debug) builds. Defaults to the
+## console/enable_on_release_build project setting (false). Setting it at runtime takes effect
+## immediately in either direction.
 var enable_on_release_build := false : set = set_enable_on_release_build
+## Where entered commands are saved between sessions. Not read or written while the console is
+## locked out of a release build.
+var history_file_path := "user://console_history.txt"
 var pause_enabled := false
 var font_size := -1:
 	set(value):
@@ -50,6 +56,8 @@ var was_paused_already := false
 var _error_occurred := false
 var _builtin_commands : RefCounted
 var _builtin_command_names : PackedStringArray
+# True while the console is disabled only because this is a release build without opt-in.
+var _release_locked := false
 
 var _dropdown_panel := Panel.new()
 var _dropdown_vbox := VBoxContainer.new()
@@ -105,7 +113,8 @@ func add_command_autocomplete_list(command_name : String, param_list : PackedStr
 
 
 func _enter_tree() -> void:
-	var console_history_file := FileAccess.open("user://console_history.txt", FileAccess.READ)
+	_apply_release_lock()
+	var console_history_file := FileAccess.open(history_file_path, FileAccess.READ) if not _release_locked else null
 	if (console_history_file):
 		while (!console_history_file.eof_reached()):
 			var line := console_history_file.get_line()
@@ -458,7 +467,9 @@ func _update_font_size():
 
 
 func _exit_tree() -> void:
-	var console_history_file := FileAccess.open("user://console_history.txt", FileAccess.WRITE)
+	if _release_locked:
+		return
+	var console_history_file := FileAccess.open(history_file_path, FileAccess.WRITE)
 	if (console_history_file):
 		var write_index := 0
 		var start_write_index := console_history.size() - 100 # Max lines to write
@@ -473,9 +484,23 @@ func _ready() -> void:
 	_builtin_commands = BuiltinCommands.new(self)
 	_builtin_commands.register_all()
 	_builtin_command_names = PackedStringArray(console_commands.keys())
-	# Setters don't run for a member's initial value, so apply the release default here.
-	if (!enable_on_release_build and !OS.is_debug_build()):
+
+
+## Release builds start locked unless the game opted in, through the
+## console/enable_on_release_build project setting or by setting enable_on_release_build before
+## the console enters the tree. Setters don't run for a member's initial value, so this has to be
+## applied explicitly.
+func _apply_release_lock() -> void:
+	if ProjectSettings.get_setting(&"console/enable_on_release_build", false):
+		enable_on_release_build = true
+	if not enable_on_release_build and _is_release_build():
 		enabled = false
+		_release_locked = true
+
+
+## Overridable seam so tests can simulate an export without the debug feature.
+func _is_release_build() -> bool:
+	return not OS.is_debug_build()
 
 
 func _input(event : InputEvent) -> void:
@@ -709,7 +734,10 @@ func set_bg_transparency(value : float) -> void:
 
 func disable():
 	enabled = false
-	toggle_console() # Ensure hidden if opened
+	# Only close if open: toggling a closed console would emit console_closed and could unpause
+	# a game that its own pause menu paused.
+	if control.visible:
+		toggle_console()
 
 
 func enable():
@@ -1095,9 +1123,17 @@ func add_input_history(text : String) -> void:
 
 func set_enable_on_release_build(enable : bool):
 	enable_on_release_build = enable
-	if (!enable_on_release_build):
-		if (!OS.is_debug_build()):
-			disable()
+	if not is_inside_tree() or not _is_release_build():
+		return # _apply_release_lock() handles it on entering the tree; debug builds are unaffected.
+	if enable:
+		# Opting in after start-up (game scripts run after this autoload's _ready) must undo the
+		# release lock, or the setting silently does nothing.
+		if _release_locked:
+			_release_locked = false
+			enabled = true
+	elif enabled:
+		_release_locked = true
+		disable()
 
 
 func _find_similar_command(input : String) -> String:
