@@ -623,6 +623,8 @@ func autocomplete() -> void:
 
 		if (" " in line_edit.text): # We're searching for a parameter to autocomplete
 			var split_text := parse_line_input(line_edit.text)
+			if (line_edit.text.ends_with(" ")): # "vsync " -> complete an empty parameter
+				split_text.append("")
 			if (split_text.size() > 1):
 				var cmd_match := _match_command_from_tokens(split_text)
 				var matched_cmd : String = cmd_match[0]
@@ -806,40 +808,46 @@ func print_line(text : Variant, print_godot := false) -> void:
 			print_rich(text.dedent())
 
 
+## Splits a command line into tokens. Whitespace separates tokens (runs of it count once),
+## double quotes group words and can make an explicit empty argument (""), and a backslash
+## escapes the next character: \n, \t, \r, \a, \b and \f become control characters, anything
+## else (including a backslash, quote or space) is taken literally.
 func parse_line_input(text : String) -> PackedStringArray:
 	var out_array : PackedStringArray
-	var first_char := true
 	var in_quotes := false
 	var escaped := false
-	var token : String
+	var token := ""
+	var has_token := false
 	for c in text:
-		if (c == '\\'):
-			escaped = true
-			continue
-		elif (escaped):
-			if (c == 'n'):
-				c = '\n'
-			elif (c == 't'):
-				c = '\t'
-			elif (c == 'r'):
-				c = '\r'
-			elif (c == 'a'):
-				c = '\a'
-			elif (c == 'b'):
-				c = '\b'
-			elif (c == 'f'):
-				c = '\f'
+		if (escaped):
+			match c:
+				'n': c = '\n'
+				't': c = '\t'
+				'r': c = '\r'
+				'a': c = '\a'
+				'b': c = '\b'
+				'f': c = '\f'
 			escaped = false
+			token += c
+			has_token = true
+		elif (c == char(92)): # backslash
+			escaped = true
 		elif (c == '\"'):
 			in_quotes = !in_quotes
-			continue
-		elif (c == ' ' || c == '\t'):
-			if (!in_quotes):
+			has_token = true
+		elif ((c == ' ' or c == '\t') and !in_quotes):
+			if (has_token):
 				out_array.push_back(token)
-				token = ""
-				continue
-		token += c
-	out_array.push_back(token)
+			token = ""
+			has_token = false
+		else:
+			token += c
+			has_token = true
+	if (escaped): # Trailing backslash: keep it.
+		token += char(92)
+		has_token = true
+	if (has_token):
+		out_array.push_back(token)
 	return out_array
 
 
