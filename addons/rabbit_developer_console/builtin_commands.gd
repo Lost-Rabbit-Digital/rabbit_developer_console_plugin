@@ -105,7 +105,7 @@ func clear() -> void:
 func delete_history() -> void:
 	console.console_history.clear()
 	console.console_history_index = 0
-	DirAccess.remove_absolute(console.history_file_path)
+	DirAccess.remove_absolute(console.resolved_history_path())
 
 
 func discord() -> void:
