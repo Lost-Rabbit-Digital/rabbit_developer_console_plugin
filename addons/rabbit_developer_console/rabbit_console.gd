@@ -122,7 +122,7 @@ func add_command_autocomplete_list(command_name : String, param_list : PackedStr
 
 func _enter_tree() -> void:
 	_apply_release_lock()
-	var console_history_file := FileAccess.open(history_file_path, FileAccess.READ) if not _release_locked else null
+	var console_history_file := FileAccess.open(resolved_history_path(), FileAccess.READ) if not _release_locked else null
 	if (console_history_file):
 		while (!console_history_file.eof_reached()):
 			var line := console_history_file.get_line()
@@ -574,7 +574,7 @@ func _exit_tree() -> void:
 	_input_shield = null
 	if _release_locked:
 		return
-	var console_history_file := FileAccess.open(history_file_path, FileAccess.WRITE)
+	var console_history_file := FileAccess.open(resolved_history_path(), FileAccess.WRITE)
 	if (console_history_file):
 		var write_index := 0
 		var start_write_index := console_history.size() - 100 # Max lines to write
@@ -1390,3 +1390,15 @@ func _levenshtein_distance(a : String, b : String) -> int:
 			curr_row[j] = mini(mini(curr_row[j - 1] + 1, prev_row[j] + 1), prev_row[j - 1] + cost)
 		prev_row = curr_row
 	return prev_row[len_b]
+
+
+## `history_file_path` routed through lrd_run_log's `LRDUserPaths` when the game
+## vendors it, so a test run or harness never writes the developer's own console
+## history. Found by class name, so there is no hard dependency.
+func resolved_history_path() -> String:
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		if entry.get("class", &"") == &"LRDUserPaths":
+			var script: Script = load(str(entry.get("path", ""))) as Script
+			if script != null and script.has_method("resolve"):
+				return str(script.call("resolve", history_file_path))
+	return history_file_path
